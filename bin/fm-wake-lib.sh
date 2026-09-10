@@ -1209,6 +1209,15 @@ fm_treehouse_pool_root() {  # <home>
   printf '%s/state\n' "$home"
 }
 
+# Whether the installed treehouse honours `treehouse get --root`, the single
+# version-floor probe (treehouse 2.2.0 or newer) that bin/fm-bootstrap.sh reports
+# as MISSING and bin/fm-spawn.sh refuses on, for a home whose
+# fm_treehouse_pool_root is non-empty. Probing --help rather than a version
+# number keeps a vendored or development build honest about what it accepts.
+fm_treehouse_supports_root() {
+  treehouse get --help 2>&1 | grep -Eq '(^|[^[:alnum:]_-])--root([^[:alnum:]_-]|$)'
+}
+
 # The one lock serializing Treehouse slot allocation and return for a project.
 #
 # It is anchored in the local root home's state directory so that every home on

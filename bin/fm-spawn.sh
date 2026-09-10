@@ -2201,7 +2201,7 @@ if [ "$RELAUNCH" -eq 0 ] && [ "$KIND" != secondmate ] && [ "$BACKEND" != orca ];
     exit 1
   }
   if [ -n "$SPAWN_TREEHOUSE_ROOT" ]; then
-    if ! treehouse get --help 2>&1 | grep -Eq '(^|[^[:alnum:]_-])--root([^[:alnum:]_-]|$)'; then
+    if ! fm_treehouse_supports_root; then
       echo "error: this secondmate home pools task worktrees under $SPAWN_TREEHOUSE_ROOT, which needs treehouse 2.2.0 or newer (treehouse get --root); upgrade treehouse before spawning here" >&2
       exit 1
     fi

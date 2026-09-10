@@ -914,12 +914,9 @@ treehouse_supports_lease() {
   treehouse get --help 2>&1 | grep -Eq '(^|[^[:alnum:]_-])--lease([^[:alnum:]_-]|$)'
 }
 
-treehouse_supports_root() {
-  treehouse get --help 2>&1 | grep -Eq '(^|[^[:alnum:]_-])--root([^[:alnum:]_-]|$)'
-}
-
 # Whether this home pools task worktrees under its own root, which is the one
-# case that needs `treehouse get --root`; bin/fm-wake-lib.sh owns the decision.
+# case that needs `treehouse get --root`; bin/fm-wake-lib.sh owns that decision
+# and the fm_treehouse_supports_root probe the check below pairs it with.
 home_pools_under_own_treehouse_root() {
   local pool_root
   if ! command -v fm_treehouse_pool_root >/dev/null 2>&1; then
@@ -1440,7 +1437,7 @@ detect_local_tools() {
     && command -v treehouse >/dev/null 2>&1; then
     if ! treehouse_supports_lease; then
       echo "MISSING: treehouse (install: $(install_cmd treehouse))"
-    elif home_pools_under_own_treehouse_root && ! treehouse_supports_root; then
+    elif home_pools_under_own_treehouse_root && ! fm_treehouse_supports_root; then
       echo "MISSING: treehouse (install: $(install_cmd treehouse))"
     fi
   fi
