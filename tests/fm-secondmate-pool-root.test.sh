@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # End-to-end regression for a secondmate home's per-home Treehouse pool root
-# (bin/fm-wake-lib.sh's fm_treehouse_pool_root), against the real treehouse.
+# (bin/fm-primary-scope-lib.sh's fm_treehouse_pool_root), against the real treehouse.
 #
 # Treehouse keys a pool by repository identity rather than clone path, so a
 # secondmate seeded with a project the primary has also cloned used to be handed
@@ -29,7 +29,7 @@ mkdir -p "$USER_HOME" "$PANES"
 # the developer's real ~/.treehouse.
 export HOME="$USER_HOME"
 
-treehouse get --help 2>&1 | grep -Eq '(^|[^[:alnum:]_-])--root([^[:alnum:]_-]|$)' \
+bash -c '. "$1"; fm_treehouse_supports_root' _ "$ROOT/bin/fm-primary-scope-lib.sh" \
   || { echo "skip: installed treehouse lacks get --root (2.2.0 or newer required)"; exit 0; }
 
 # Every pane shell the fake terminal started, and every slot it acquired, is

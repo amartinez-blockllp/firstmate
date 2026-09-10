@@ -756,6 +756,36 @@ test_secondmate_home_treehouse_root_check() {
   pass "bootstrap: a secondmate home requires treehouse get --root while a primary home does not"
 }
 
+test_detect_only_stays_read_only_with_root_capable_treehouse() {
+  local case_dir fakebin status
+  # The secondmate --root check runs inside detection, which FM_BOOTSTRAP_DETECT_ONLY
+  # promises is read-only: a lease-capable treehouse must not make detection
+  # create a missing state/ in either kind of home.
+  case_dir="$TMP_ROOT/detect-only-primary-no-state"
+  mkdir -p "$case_dir/home/config"
+  printf '%s\n' manual > "$case_dir/home/config/backlog-backend"
+  fakebin=$(make_fake_toolchain "$case_dir")
+  PATH="$fakebin:$BASE_PATH" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
+    FM_FAKE_TREEHOUSE_LEASE_HELP=1 FM_FAKE_TREEHOUSE_ROOT_HELP=1 FM_BOOTSTRAP_DETECT_ONLY=1 \
+    "$ROOT/bin/fm-bootstrap.sh" >/dev/null 2>&1; status=$?
+  expect_code 0 "$status" "detect-only bootstrap should succeed in a primary home without state/"
+  [ ! -e "$case_dir/home/state" ] \
+    || fail "detect-only bootstrap created state/ in a primary home"
+
+  case_dir="$TMP_ROOT/detect-only-secondmate-no-state"
+  mkdir -p "$case_dir/home/config"
+  printf '%s\n' manual > "$case_dir/home/config/backlog-backend"
+  printf '%s\n' mate > "$case_dir/home/.fm-secondmate-home"
+  fakebin=$(make_fake_toolchain "$case_dir")
+  PATH="$fakebin:$BASE_PATH" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
+    FM_FAKE_TREEHOUSE_LEASE_HELP=1 FM_FAKE_TREEHOUSE_ROOT_HELP=1 FM_BOOTSTRAP_DETECT_ONLY=1 \
+    "$ROOT/bin/fm-bootstrap.sh" >/dev/null 2>&1; status=$?
+  expect_code 0 "$status" "detect-only bootstrap should succeed in a secondmate home without state/"
+  [ ! -e "$case_dir/home/state" ] \
+    || fail "detect-only bootstrap created state/ in a secondmate home"
+  pass "bootstrap: detect-only stays read-only when treehouse advertises --lease and --root"
+}
+
 test_fleet_sync_timeout_scales_with_origin_backed_project_count() {
   local case_dir home fakebin fake_root out
   case_dir="$TMP_ROOT/fleet-timeout-scaled"
@@ -1212,6 +1242,7 @@ test_unknown_backend_reports_invalid_configuration
 test_json_backends_require_jq_not_tmux
 test_treehouse_lease_check_follows_resolved_backend
 test_secondmate_home_treehouse_root_check
+test_detect_only_stays_read_only_with_root_capable_treehouse
 test_fleet_sync_timeout_scales_with_origin_backed_project_count
 test_fleet_sync_timeout_floor_preserves_small_fleets
 test_fleet_sync_timeout_explicit_override_wins

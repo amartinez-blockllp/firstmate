@@ -55,7 +55,7 @@
 #          "treehouse get --lease" support, or, in a secondmate home, lacks
 #          "treehouse get --root" support (treehouse 2.2.0 or newer), because such
 #          a home pools its task worktrees under its own root
-#          (bin/fm-wake-lib.sh's fm_treehouse_pool_root owns that contract).
+#          (bin/fm-primary-scope-lib.sh's fm_treehouse_pool_root owns that contract).
 #          no-mistakes is also MISSING when its installed version is older than
 #          1.46.0 (structured pipeline attestation floor; see CONTRIBUTING.md).
 #          The AXI-family floor policy is owned beside GH_AXI_MIN and
@@ -915,14 +915,15 @@ treehouse_supports_lease() {
 }
 
 # Whether this home pools task worktrees under its own root, which is the one
-# case that needs `treehouse get --root`; bin/fm-wake-lib.sh owns that decision
-# and the fm_treehouse_supports_root probe the check below pairs it with.
+# case that needs `treehouse get --root`; bin/fm-primary-scope-lib.sh owns that
+# decision and the fm_treehouse_supports_root probe the check below pairs it
+# with. That library has no side effects on source, unlike bin/fm-wake-lib.sh,
+# whose source-time state-directory creation must stay out of this detection
+# path so FM_BOOTSTRAP_DETECT_ONLY remains read-only.
 home_pools_under_own_treehouse_root() {
   local pool_root
-  if ! command -v fm_treehouse_pool_root >/dev/null 2>&1; then
-    # shellcheck source=bin/fm-wake-lib.sh disable=SC1091
-    . "$SCRIPT_DIR/fm-wake-lib.sh"
-  fi
+  # shellcheck source=bin/fm-primary-scope-lib.sh disable=SC1091
+  . "$SCRIPT_DIR/fm-primary-scope-lib.sh"
   pool_root=$(fm_treehouse_pool_root "$FM_HOME" 2>/dev/null) || return 1
   [ -n "$pool_root" ]
 }

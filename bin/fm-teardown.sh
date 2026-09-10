@@ -95,7 +95,7 @@
 # descendant Treehouse slot before touching any child. The lock is keyed by the
 # pool root recorded as treehouse_root= in the task's meta (absent for treehouse's
 # default pool), and `treehouse return` is run under that same recorded root, so a
-# secondmate's private pool (bin/fm-wake-lib.sh's fm_treehouse_pool_root owns that
+# secondmate's private pool (bin/fm-primary-scope-lib.sh's fm_treehouse_pool_root owns that
 # contract) is returned where it was allocated rather than resolved afresh.
 # This refusal is not relaxed by --force: --force authorizes discarding THIS
 # task's unlanded work, never another task's live work. Reconcile whichever
@@ -286,6 +286,8 @@ fm_backlog_directory_present "$STATE" "state directory" || {
 }
 # shellcheck source=bin/fm-wake-lib.sh
 . "$SCRIPT_DIR/fm-wake-lib.sh"
+# shellcheck source=bin/fm-primary-scope-lib.sh
+. "$SCRIPT_DIR/fm-primary-scope-lib.sh"
 # Supervision lease guard: post-landing cleanup is overlap territory between
 # the two Pi supervision actors; refuse while the OTHER actor holds this
 # task's live lease (contract: bin/fm-lease-lib.sh; no-op in homes without

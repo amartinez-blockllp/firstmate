@@ -11,7 +11,7 @@
 #
 # Pins Treehouse v2.3.0, the version exercised by the local real-Herdr suite and
 # the earliest line whose `treehouse get --root` a secondmate home's per-home
-# pool root requires (bin/fm-wake-lib.sh's fm_treehouse_pool_root); --root and
+# pool root requires (bin/fm-primary-scope-lib.sh's fm_treehouse_pool_root); --root and
 # TREEHOUSE_ROOT arrived in 2.2.0.
 set -eu
 

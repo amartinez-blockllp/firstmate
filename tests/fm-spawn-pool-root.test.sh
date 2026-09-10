@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Regression tests for the per-home Treehouse pool root that fm-spawn applies
-# and fm-teardown replays (bin/fm-wake-lib.sh's fm_treehouse_pool_root).
+# and fm-teardown replays (bin/fm-primary-scope-lib.sh's fm_treehouse_pool_root).
 #
 # A secondmate home must type `treehouse get --root <home>/state` into its
 # task pane and record that root, a primary home must keep typing the plain

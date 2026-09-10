@@ -120,7 +120,7 @@
 #   that lock itself rather than failing to resolve one;
 #   contention refuses rather than waits.
 #   A fresh Treehouse-backed spawn also pools its slot under the root that
-#   bin/fm-wake-lib.sh's fm_treehouse_pool_root resolves for this home: a primary
+#   bin/fm-primary-scope-lib.sh's fm_treehouse_pool_root resolves for this home: a primary
 #   home types a plain `treehouse get` and keeps treehouse's own default pool, while
 #   a secondmate home types `treehouse get --root <home>/state` so its slot is a
 #   linked worktree of that home's OWN project clone rather than of a primary clone
@@ -424,6 +424,8 @@ fi
 . "$SCRIPT_DIR/fm-ff-lib.sh"
 # shellcheck source=bin/fm-wake-lib.sh
 . "$SCRIPT_DIR/fm-wake-lib.sh"
+# shellcheck source=bin/fm-primary-scope-lib.sh
+. "$SCRIPT_DIR/fm-primary-scope-lib.sh"
 fm_backlog_directory_present "$STATE" "state directory" || {
   echo "error: spawn refused: $FM_BACKLOG_TRANSITION_ERROR" >&2
   exit 1
