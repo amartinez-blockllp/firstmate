@@ -19,6 +19,26 @@
 # it ever reads the brief. Registering the trust before launch is the only
 # control that reaches an interactive pane.
 #
+# IMPORTS DECLINED. The same write also records Claude Code's external-import
+# prompt as already answered No (hasClaudeMdExternalIncludesWarningShown true,
+# hasClaudeMdExternalIncludesApproved false). Claude loads the CLAUDE.md of every
+# ancestor of the worktree, and one importing a file outside the worktree - a
+# firstmate checkout's `@AGENTS.md` pointer is exactly that - raises a blocking
+# prompt the steering plane cannot answer either. Task worktrees are placed
+# outside every firstmate checkout (bin/fm-primary-scope-lib.sh's
+# fm_treehouse_pool_root), so this is the backstop for a layout that ever puts one
+# back under such a file: the worker launches with the imports off and no prompt.
+# Claude reads that answer from the entry of the repository's main checkout, not
+# the linked worktree's own, so the pair is written to both: the main checkout's
+# entry is the one the vendor reads today, and the worktree's keeps a build that
+# keys by working directory covered. Approved is always written false, replacing
+# any earlier answer - including a Yes once given to some worker's prompt, which
+# the vendor stores on that shared main-checkout entry for every later worker of
+# the project - and is never written true, because approval would load that
+# file's instructions into a project worker as its own. Declining also applies to
+# a person's own Claude session opened in that firstmate-managed clone.
+# docs/verification/runtime-backends.md records the observed vendor behavior.
+#
 # THE SCOPE TEST IS THE SAFETY PROPERTY, and it is STRUCTURAL rather than a
 # path policy. <worktree> must be a LINKED git worktree - its own git dir,
 # sharing <project>'s common dir - whose top level is exactly the resolved
@@ -45,13 +65,14 @@
 # opt-in guard family (FM_*_LIVE_E2E=1) and record the result in
 # docs/verification/runtime-backends.md, rather than assuming the shape here.
 #
-# Only the launching user's own store is written: the projects entry for the
-# worktree path in ${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json, which must be a
-# regular file this uid owns. Every unrelated key and project entry is
-# preserved, and the replacement is atomic. fm-spawn.sh forwards CLAUDE_CONFIG_DIR
-# onto the claude launch verbatim rather than resolving it, and the worker's pane
-# starts in the task worktree, so only an absolute value names the same store on
-# both sides; a relative one is refused below rather than guessed at.
+# Only the launching user's own store is written: the projects entries for the
+# worktree path and its main checkout in ${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json,
+# which must be a regular file this uid owns. Every unrelated key, project entry,
+# and field of those two entries is preserved, and the replacement is atomic.
+# fm-spawn.sh forwards CLAUDE_CONFIG_DIR onto the claude launch verbatim rather
+# than resolving it, and the worker's pane starts in the task worktree, so only
+# an absolute value names the same store on both sides; a relative one is
+# refused below rather than guessed at.
 set -u
 # Path resolution here must answer from the filesystem, never from the caller's
 # environment, because the refusals below are the safety property. CDPATH would
@@ -141,6 +162,16 @@ PROJ_COMMON=$(common_dir_of "$PROJ_REAL") || true
 [ -n "$PROJ_COMMON" ] || refuse "project '$PROJ_REAL' is not inside a git repository"
 [ "$WT_COMMON" = "$PROJ_COMMON" ] || refuse "'$WT_REAL' is not a worktree of project '$PROJ_REAL'"
 
+# The repository's main checkout, whose store entry Claude reads the import
+# answer from (see IMPORTS DECLINED). Git's own worktree list names it first.
+MAIN_WT=$(git -C "$WT_REAL" worktree list --porcelain 2>/dev/null) || true
+MAIN_WT=${MAIN_WT%%$'\n'*}
+MAIN_REAL=
+case $MAIN_WT in
+  'worktree '?*) MAIN_REAL=$(real_dir "${MAIN_WT#worktree }") || true ;;
+esac
+[ -n "$MAIN_REAL" ] || refuse "the main checkout of '$WT_REAL' cannot be resolved"
+
 # The store write needs node, and a missing interpreter refuses like every other
 # failure here. Degrading instead would launch a worker straight into the dialog
 # this registration exists to remove, which is the one outcome the whole control
@@ -190,11 +221,19 @@ fi
 # attempts, and it must fail loudly rather than report a trust it did not leave.
 # ponytail: fingerprint-and-refuse, not a lock; flock is absent on macOS and
 # cannot stop a vendor session's own rewrite anyway.
-if ! node - "$STORE" "$WT_REAL" <<'NODE'
+if ! node - "$STORE" "$WT_REAL" "$MAIN_REAL" <<'NODE'
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
-const [store, worktree] = process.argv.slice(2);
+const [store, worktree, main] = process.argv.slice(2);
+const objectEntry = (projects, key) => {
+  const entry = projects[key];
+  return entry === undefined || entry === null || typeof entry !== "object" || Array.isArray(entry)
+    ? {} : entry;
+};
+const declinesImports = (entry) =>
+  entry?.hasClaudeMdExternalIncludesWarningShown === true
+  && entry.hasClaudeMdExternalIncludesApproved === false;
 const readStore = () => {
   try {
     return fs.readFileSync(store);
@@ -223,12 +262,14 @@ const attempt = () => {
   if (projects === null || typeof projects !== "object" || Array.isArray(projects)) {
     throw new Error(`${store} has a non-object "projects" value`);
   }
-  let entry = projects[worktree];
-  if (entry === undefined || entry === null || typeof entry !== "object" || Array.isArray(entry)) {
-    entry = {};
+  // Declined, never approved: see IMPORTS DECLINED in the header.
+  for (const key of new Set([main, worktree])) {
+    const entry = objectEntry(projects, key);
+    entry.hasClaudeMdExternalIncludesWarningShown = true;
+    entry.hasClaudeMdExternalIncludesApproved = false;
+    projects[key] = entry;
   }
-  entry.hasTrustDialogAccepted = true;
-  projects[worktree] = entry;
+  projects[worktree].hasTrustDialogAccepted = true;
   // Unpredictable name plus an exclusive create: the config directory may be
   // writable by another local account, and a predictable path could be
   // pre-created there as a symlink that a plain write would follow into some
@@ -249,8 +290,10 @@ const attempt = () => {
   } finally {
     if (!renamed) fs.rmSync(tmp, { force: true });
   }
-  const back = JSON.parse(fs.readFileSync(store, "utf8"));
-  return back.projects?.[worktree]?.hasTrustDialogAccepted === true ? "recorded" : "dropped";
+  const back = JSON.parse(fs.readFileSync(store, "utf8")).projects;
+  return back?.[worktree]?.hasTrustDialogAccepted === true
+    && declinesImports(back[worktree]) && declinesImports(back[main])
+    ? "recorded" : "dropped";
 };
 try {
   for (let i = 0; i < 3; i += 1) {

@@ -10,7 +10,7 @@
 #       "treehouse return". Projects are cloned
 #       from the active home into the secondmate home's projects/ directory.
 #       Each seeded clone is a separate clone of the same origin, and the seeded
-#       home's task worktrees later pool under that home's own state/ rather
+#       home's task worktrees later pool under a root private to that home rather
 #       than the primary's pool (bin/fm-primary-scope-lib.sh's fm_treehouse_pool_root
 #       owns that contract), so nothing here writes treehouse configuration into
 #       a clone. That project list is non-exclusive provisioning data. Pass --no-projects

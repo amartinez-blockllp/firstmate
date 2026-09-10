@@ -4,7 +4,9 @@
 # Both halves of the contract are load-bearing and both are proven here: a
 # legitimate fresh task worktree is trusted so a claude worker reaches its
 # brief with no human, and every out-of-scope path is REFUSED rather than
-# warned about or quietly skipped.
+# warned about or quietly skipped. The same registration answers Claude's
+# external-import prompt as No on both the worktree's entry and its main
+# checkout's, which is where the vendor reads that answer, and never approves.
 set -u
 
 # shellcheck source=tests/fixtures.sh
@@ -67,6 +69,12 @@ assert_store_value() {  # <store> <expected-json> <msg> <key...>
   [ "$actual" = "$expected" ] || fail "$msg (expected $expected, got $actual)"
 }
 
+# The prompt counts as answered No only with the warning shown AND approval false.
+assert_imports_declined() {  # <store> <path> <msg>
+  assert_store_value "$1" true "$3: the import prompt is not marked answered" projects "$2" hasClaudeMdExternalIncludesWarningShown
+  assert_store_value "$1" false "$3: external imports are not declined" projects "$2" hasClaudeMdExternalIncludesApproved
+}
+
 # A PATH carrying the tools the scope test needs but no node, so the
 # missing-interpreter path is exercised without disturbing the real PATH.
 node_free_path() {  # <case-dir> -> a bin dir holding the script's own tools but no node
@@ -86,6 +94,9 @@ test_fresh_worktree_is_trusted() {
   expect_code 0 $? "a fresh linked worktree must be trusted: $out"
   assert_contains "$out" "trusted:" "registration did not report what it trusted"
   assert_trusted "$CONFIG/.claude.json" "$WT" "the worktree was not recorded as trusted"
+  assert_imports_declined "$CONFIG/.claude.json" "$WT" "the worktree's entry"
+  assert_imports_declined "$CONFIG/.claude.json" "$PROJ" "the main checkout's entry, which the vendor reads"
+  assert_not_trusted "$CONFIG/.claude.json" "$PROJ" "the main checkout was trusted while declining its imports"
   # The staged write is renamed into place, so no temporary store may survive it.
   [ -z "$(find "$CONFIG" -maxdepth 1 -name '.claude.json.fm-trust.*' -print -quit)" ] \
     || fail "a temporary store file was left behind in the config directory"
@@ -112,6 +123,7 @@ test_primary_checkout_is_refused() {
   expect_code 1 $? "the primary checkout must be refused: $out"
   assert_contains "$out" "primary checkout" "the refusal did not name the primary checkout"
   assert_not_trusted "$CONFIG/.claude.json" "$PROJ" "the primary checkout was trusted"
+  [ ! -e "$CONFIG/.claude.json" ] || fail "a refused registration still wrote the store"
   pass "fm-claude-trust.sh: refuses the primary checkout"
 }
 
@@ -278,7 +290,29 @@ JSON
   assert_store_value "$store" 7 "an unrelated top-level value was changed" numStartups
   assert_store_value "$store" '["Bash"]' "another project's settings were lost" projects /other/path allowedTools
   assert_not_trusted "$store" "/other/path" "another project's trust decision was flipped"
+  assert_store_value "$store" 'undefined' "another project gained an import answer" projects /other/path hasClaudeMdExternalIncludesApproved
   pass "fm-claude-trust.sh: preserves unrelated store content"
+}
+
+# A Yes once given to some worker's import prompt is stored on the project's main
+# checkout entry, where every later worker of that project would read it and load
+# the imported instructions as its own. Registration must put it back to No,
+# keep every other field of both entries, and never leave an approval behind.
+test_prior_import_approval_is_reset_to_declined() {
+  local rec store out
+  rec=$(make_case approval-reset)
+  read_case "$rec"
+  store="$CONFIG/.claude.json"
+  node -e 'const [s,p,w]=process.argv.slice(1);require("node:fs").writeFileSync(s,JSON.stringify({projects:{[p]:{hasClaudeMdExternalIncludesWarningShown:true,hasClaudeMdExternalIncludesApproved:true,allowedTools:["Read"],hasTrustDialogAccepted:false},[w]:{hasClaudeMdExternalIncludesApproved:true,lastCost:3}}}))' "$store" "$PROJ" "$WT"
+  out=$(run_trust "$CONFIG" "$WT" "$PROJ")
+  expect_code 0 $? "registration over a prior approval must succeed: $out"
+  assert_imports_declined "$store" "$PROJ" "a prior approval on the main checkout's entry"
+  assert_imports_declined "$store" "$WT" "a prior approval on the worktree's entry"
+  assert_store_value "$store" '["Read"]' "the main checkout's other settings were lost" projects "$PROJ" allowedTools
+  assert_store_value "$store" false "the main checkout's own trust decision was changed" projects "$PROJ" hasTrustDialogAccepted
+  assert_store_value "$store" 3 "the worktree entry's other fields were lost" projects "$WT" lastCost
+  assert_trusted "$store" "$WT" "the worktree was not trusted over a prior entry"
+  pass "fm-claude-trust.sh: resets a prior import approval to declined and keeps every other field"
 }
 
 test_symlinked_store_to_a_foreign_owned_target_is_refused() {
@@ -331,7 +365,8 @@ test_missing_node_is_refused() {
   bindir=$(node_free_path "$CASE_DIR")
   out=$(PATH="$bindir" run_trust "$CONFIG" "$WT" "$PROJ")
   expect_code 1 $? "a missing node must refuse rather than let the spawn proceed: $out"
-  assert_contains "$out" "node" "the refusal did not name the missing interpreter"
+  # The case path itself contains "no-node", so match the reason, not the word.
+  assert_contains "$out" "node is required" "the refusal did not name the missing interpreter"
   assert_not_trusted "$CONFIG/.claude.json" "$WT" "a worktree was trusted without an interpreter to write the store"
   case "$out" in
     *"trusted:"*) fail "a registration was claimed although none could be written: $out" ;;
@@ -453,6 +488,7 @@ test_missing_directory_is_refused
 test_foreign_project_worktree_is_refused
 test_worktree_subdirectory_is_refused
 test_unrelated_store_content_is_preserved
+test_prior_import_approval_is_reset_to_declined
 test_symlinked_store_to_a_foreign_owned_target_is_refused
 test_symlinked_store_to_an_owned_target_is_accepted
 test_corrupt_store_fails_closed

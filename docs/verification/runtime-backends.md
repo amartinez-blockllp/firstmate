@@ -304,6 +304,45 @@ This change does not address that warning and does not claim to.
 That automated spawn case runs against a fake claude, so it asserts the store entry and the launch command and nothing more; the live arms above are what establish that the entry actually suppresses the dialog.
 The composer-classification record below observes the same gate from the other side, where an untrusted worktree left Claude, Grok, and Muse unverified because the guard reads a first-launch trust dialog as an unreadable composer.
 
+## Claude external-import prompt
+
+Verified 2026-09-10 on Claude Code 2.1.268, macOS arm64.
+When an ancestor `CLAUDE.md` of a trusted worktree imports a file outside that worktree, as a firstmate checkout's `@AGENTS.md` pointer does, Claude raises a second blocking prompt after workspace trust.
+It reproduces with a scratch home whose `CLAUDE.md` is `@AGENTS.md` above a linked worktree registered with workspace trust only:
+
+```
+Allow external CLAUDE.md file imports?
+This project's CLAUDE.md imports files outside the current working directory. Never allow this for third-party repositories.
+External imports:
+ <scratch>/home/AGENTS.md
+❯ No, disable external imports
+  Yes, allow external imports
+Enter to confirm · Esc to cancel
+```
+
+The answer lives in the store's project entry as `hasClaudeMdExternalIncludesWarningShown` and `hasClaudeMdExternalIncludesApproved`, and Claude reads it from the entry of the repository's main checkout, not the linked worktree's own.
+Writing the pair onto the worktree entry alone still raised the prompt, and answering No there recorded `{"hasClaudeMdExternalIncludesApproved":false,"hasClaudeMdExternalIncludesWarningShown":true}` on the main checkout's entry instead.
+A live secondmate home's store showed the same split: the main project clone's entry carried that pair while its pooled worker's worktree entry carried only workspace trust.
+`bin/fm-claude-trust.sh` therefore writes the declined pair to both entries.
+
+With that registration, a worker in a fresh worktree under the same importing ancestor showed no prompt and did not load the imported file.
+Asked to reply with the codeword that only the imported `AGENTS.md` defined, or `ABSENT`, it answered `ABSENT`; a positive control whose ancestor `CLAUDE.md` carried the codeword inline answered `PELICAN-SEVEN`.
+
+The token-free live guard refreshes this record: each arm uses its own throwaway `CLAUDE_CONFIG_DIR` with no login, so it submits no prompt and never touches the operator's store.
+
+```sh
+tests/fm-claude-trust-imports-live-e2e.test.sh
+```
+
+```
+ok - claude 2.1.268 (Claude Code): an unanswered ancestor import raises the prompt
+note: claude 2.1.268 (Claude Code) reads the import answer from the main checkout entry, not the worktree entry
+ok - claude 2.1.268 (Claude Code): the registered answer suppresses the prompt and the worker reaches its composer
+```
+
+The same guard run against the previous registration, which wrote only workspace trust, failed its treatment arm with `still raised the import prompt`.
+`tests/fm-claude-trust.test.sh` pins the portable half: both entries receive the declined pair, a prior approval is reset to declined, and every other entry and field is preserved.
+
 ## Composer classification matrix
 
 The shared composer classifier (`bin/fm-composer-lib.sh`, `fm_composer_classify_screen`) owns every composer shape fleet-wide; each backend contributes only a capture and a capability descriptor.
