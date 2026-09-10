@@ -92,7 +92,11 @@
 # every local Firstmate home hold the same lock from before slot allocation
 # through metadata publication, closing the publication
 # gap; forced secondmate teardown takes it and runs the same checks for every
-# descendant Treehouse slot before touching any child.
+# descendant Treehouse slot before touching any child. The lock is keyed by the
+# pool root recorded as treehouse_root= in the task's meta (absent for treehouse's
+# default pool), and `treehouse return` is run under that same recorded root, so a
+# secondmate's private pool (bin/fm-primary-scope-lib.sh's fm_treehouse_pool_root owns that
+# contract) is returned where it was allocated rather than resolved afresh.
 # This refusal is not relaxed by --force: --force authorizes discarding THIS
 # task's unlanded work, never another task's live work. Reconcile whichever
 # record is wrong and re-run. Orca is not a pool slot and proves its path through
@@ -282,6 +286,8 @@ fm_backlog_directory_present "$STATE" "state directory" || {
 }
 # shellcheck source=bin/fm-wake-lib.sh
 . "$SCRIPT_DIR/fm-wake-lib.sh"
+# shellcheck source=bin/fm-primary-scope-lib.sh
+. "$SCRIPT_DIR/fm-primary-scope-lib.sh"
 # Supervision lease guard: post-landing cleanup is overlap territory between
 # the two Pi supervision actors; refuse while the OTHER actor holds this
 # task's live lease (contract: bin/fm-lease-lib.sh; no-op in homes without
@@ -325,11 +331,12 @@ if [ -f "$META" ] && [ ! -L "$META" ]; then
   [ -n "$TEARDOWN_LOCK_BACKEND" ] || TEARDOWN_LOCK_BACKEND=tmux
   TEARDOWN_LOCK_WT=$(fm_meta_get "$META" worktree)
   TEARDOWN_LOCK_PROJECT=$(fm_meta_get "$META" project)
+  TEARDOWN_LOCK_TREEHOUSE_ROOT=$(fm_meta_get "$META" treehouse_root)
   if [ "$TEARDOWN_LOCK_KIND" != secondmate ] \
      && [ "$TEARDOWN_LOCK_BACKEND" != orca ] \
      && is_treehouse_pool_slot "$TEARDOWN_LOCK_PROJECT" "$TEARDOWN_LOCK_WT"; then
     TREEHOUSE_SLOT_LOCK_REQUIRED=1
-    TREEHOUSE_PROJECT_LOCK=$(fm_treehouse_project_lock_path "$TEARDOWN_LOCK_PROJECT") || {
+    TREEHOUSE_PROJECT_LOCK=$(fm_treehouse_project_lock_path "$TEARDOWN_LOCK_PROJECT" "$TEARDOWN_LOCK_TREEHOUSE_ROOT") || {
       echo "REFUSED: cannot resolve the shared Treehouse project lock for ${TEARDOWN_LOCK_PROJECT:-<missing>}; nothing was changed" >&2
       exit 1
     }
@@ -905,6 +912,8 @@ BACKEND=$FM_BACKEND_VALIDATED_BACKEND
 T=$FM_BACKEND_VALIDATED_TARGET
 WT=$(fm_meta_get "$META" worktree)
 PROJ=$(fm_meta_get "$META" project)
+# The pool root the slot was allocated under; absent means treehouse's default pool.
+TREEHOUSE_ROOT=$(fm_meta_get "$META" treehouse_root)
 T_ORCA=
 [ "$BACKEND" != orca ] || T_ORCA=$T
 if [ "${FM_TEARDOWN_GUARD_DONE:-0}" != 1 ]; then
@@ -927,7 +936,7 @@ KIND=$TEARDOWN_META_KIND
 EXPECTED_TREEHOUSE_PROJECT_LOCK=
 if [ "$KIND" != secondmate ] && [ "$BACKEND" != orca ] \
    && is_treehouse_pool_slot "$PROJ" "$WT"; then
-  EXPECTED_TREEHOUSE_PROJECT_LOCK=$(fm_treehouse_project_lock_path "$PROJ") || {
+  EXPECTED_TREEHOUSE_PROJECT_LOCK=$(fm_treehouse_project_lock_path "$PROJ" "$TREEHOUSE_ROOT") || {
     echo "REFUSED: cannot resolve the shared Treehouse project lock for ${PROJ:-<missing>}; nothing was changed" >&2
     exit 1
   }
@@ -1565,13 +1574,24 @@ cleanup_stale_lock_for_safety_check() {
 
 # Return a worktree/home via `treehouse return --force`, tolerating a transient or
 # stale git index.lock left by a killed crew process. See the script header.
+# treehouse_return_once <dir> <cd-dir> <pool-root>: one `treehouse return --force`
+# of <dir> from <cd-dir>, under --root <pool-root> when the slot was allocated
+# under a recorded per-home root (empty means treehouse's default pool).
+treehouse_return_once() {
+  local dir=$1 cd_dir=$2 pool_root=$3
+  local -a args=(return)
+  [ -z "$pool_root" ] || args+=(--root "$pool_root")
+  args+=(--force "$dir")
+  ( cd "$cd_dir" && treehouse "${args[@]}" ) 2>&1
+}
+
 teardown_treehouse_return() {
-  local dir=$1 cd_dir=$2 label=$3 post_cleanup_check=${4:-}
+  local dir=$1 cd_dir=$2 label=$3 post_cleanup_check=${4:-} pool_root=${5:-}
   local out lock attempt=0 max_retries lock_desc
 
   # Capture stdout+stderr so non-lock failures stay visible and lock failures can
   # be matched by signature even when the lock file is already gone mid-check.
-  if out=$( ( cd "$cd_dir" && treehouse return --force "$dir" ) 2>&1 ); then
+  if out=$(treehouse_return_once "$dir" "$cd_dir" "$pool_root"); then
     [ -n "$out" ] && printf '%s\n' "$out"
     return 0
   fi
@@ -1596,7 +1616,7 @@ teardown_treehouse_return() {
     echo "teardown: $label return failed with transient git lock ($lock_desc); waiting ${TREEHOUSE_RETURN_LOCK_RETRY_WAIT_SECS}s and retrying ($attempt/${max_retries})" >&2
     sleep "$TREEHOUSE_RETURN_LOCK_RETRY_WAIT_SECS"
 
-    if out=$( ( cd "$cd_dir" && treehouse return --force "$dir" ) 2>&1 ); then
+    if out=$(treehouse_return_once "$dir" "$cd_dir" "$pool_root"); then
       [ -n "$out" ] && printf '%s\n' "$out"
       echo "teardown: $label return succeeded on retry; lock cleared on its own" >&2
       return 0
@@ -1623,7 +1643,7 @@ teardown_treehouse_return() {
           return 1
         fi
       fi
-      if out=$( ( cd "$cd_dir" && treehouse return --force "$dir" ) 2>&1 ); then
+      if out=$(treehouse_return_once "$dir" "$cd_dir" "$pool_root"); then
         [ -n "$out" ] && printf '%s\n' "$out"
         echo "teardown: $label return succeeded after stale-lock cleanup" >&2
         return 0
@@ -2646,7 +2666,7 @@ preflight_descendant_treehouse_slots() {
     if ! is_treehouse_pool_slot "$project" "$worktree"; then
       continue
     fi
-    lock_path=$(fm_treehouse_project_lock_path "$project") || {
+    lock_path=$(fm_treehouse_project_lock_path "$project" "$(meta_value "$meta" treehouse_root)") || {
       echo "REFUSED: cannot resolve the shared Treehouse project lock for child $task_id; forced teardown changed nothing" >&2
       return 1
     }
@@ -2914,7 +2934,7 @@ cleanup_firstmate_home_children() {
         "$child_wt/.opencode/plugins/fm-busy-state.js" \
         "$child_wt/.fm-grok-turnend" "$child_wt/.fm-kimi-turnend"
       if [ -n "$child_proj" ] && [ -d "$child_proj" ] && command -v treehouse >/dev/null 2>&1; then
-        if teardown_treehouse_return "$child_wt" "$child_proj" "child worktree"; then
+        if teardown_treehouse_return "$child_wt" "$child_proj" "child worktree" "" "$(meta_value "$child_meta" treehouse_root)"; then
           :
         else
           child_return_rc=$?
@@ -3224,13 +3244,14 @@ elif [ -d "$WT" ] && [ "$KIND" != secondmate ]; then
     "$WT/.fm-grok-turnend" "$WT/.fm-kimi-turnend"
   # Kills remaining processes in the worktree (including the agent), resets, returns
   # to pool. treehouse resolves the pool from the working directory, so run it from
-  # the project. teardown_treehouse_return tolerates transient and stale git locks
+  # the project, under the recorded per-home root when the slot was allocated
+  # under one. teardown_treehouse_return tolerates transient and stale git locks
   # left by a killed crew process; see the script header for retry and stale-lock proof.
   post_lock_cleanup_check=
   if [ "$FORCE" != "--force" ] && [ "$KIND" != scout ] && [ "$KIND" != secondmate ]; then
     post_lock_cleanup_check=validate_worktree_teardown_safety
   fi
-  teardown_treehouse_return "$WT" "$PROJ" "worktree" "$post_lock_cleanup_check" || {
+  teardown_treehouse_return "$WT" "$PROJ" "worktree" "$post_lock_cleanup_check" "$TREEHOUSE_ROOT" || {
     echo "error: treehouse return failed for worktree $WT; teardown aborted" >&2
     exit 1
   }

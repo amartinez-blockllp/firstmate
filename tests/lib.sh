@@ -345,6 +345,23 @@ SH
   done
 }
 
+# fm_fake_treehouse <fakebin>
+# Drops a no-op `treehouse` that still answers the capability probes
+# bin/fm-spawn.sh and bin/fm-bootstrap.sh run against `treehouse get --help`
+# (--lease, and --root for a secondmate home's per-home pool root), so a spawn
+# driven from a secondmate home is not refused by a fake that advertises nothing.
+fm_fake_treehouse() {
+  local fakebin=$1
+  cat > "$fakebin/treehouse" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = get ] && [ "${2:-}" = --help ]; then
+  printf 'Usage: treehouse get [--lease] [--root string]\n'
+fi
+exit 0
+SH
+  chmod +x "$fakebin/treehouse"
+}
+
 # fm_fake_crash_injector <fakebin>
 # Drops an `fm-crash-inject <pid>` shim that a PATH fake calls to simulate a
 # hard crash of the process under test. It SIGKILLs <pid> and then returns only

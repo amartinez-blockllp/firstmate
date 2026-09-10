@@ -1185,11 +1185,15 @@ fm_firstmate_root_home() {
 # It is anchored in the local root home's state directory so that every home on
 # this machine that can reach the same pool - the root, and each secondmate home
 # below it, including a remote-seeded home and its own local descendants -
-# derives the identical path. Its identity is the project's resolved origin, so
-# separate clones of one origin share a single lock; an origin-less local-only
-# project falls back to its own worktree top instead of failing to resolve.
-fm_treehouse_project_lock_path() {  # <project-dir>
-  local project=$1 root origin identity hash top
+# derives the identical path. Its identity is the project's resolved origin
+# plus the pool root the slot lives under (bin/fm-primary-scope-lib.sh's
+# fm_treehouse_pool_root contract;
+# empty for treehouse's default pool), so separate clones of one origin sharing
+# the default pool share a single lock while a secondmate's private pool gets
+# its own; an origin-less local-only project falls back to its own worktree top
+# instead of failing to resolve.
+fm_treehouse_project_lock_path() {  # <project-dir> [<pool-root>]
+  local project=$1 pool_root=${2:-} root origin identity hash top
   [ -d "$project" ] || return 1
   root=$(fm_firstmate_root_home "$FM_HOME") || return 1
   origin=$(git -C "$project" remote get-url origin 2>/dev/null || true)
@@ -1205,6 +1209,7 @@ fm_treehouse_project_lock_path() {  # <project-dir>
     top=$(CDPATH='' cd -- "$top" 2>/dev/null && pwd -P) || return 1
     identity=$top
   fi
+  [ -z "$pool_root" ] || identity="$identity"$'\n'"$pool_root"
   hash=$(printf '%s' "$identity" | git hash-object --stdin 2>/dev/null) || return 1
   [ -d "$root/state" ] || return 1
   printf '%s/.treehouse-project-%s.lock\n' "$root/state" "$hash"
