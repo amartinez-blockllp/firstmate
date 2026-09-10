@@ -19,18 +19,26 @@ set -u
 . "$(dirname "${BASH_SOURCE[0]}")/fixtures.sh"
 
 command -v treehouse >/dev/null 2>&1 || { echo "skip: treehouse not found (required by fm-spawn.sh)"; exit 0; }
-treehouse get --help 2>&1 | grep -Eq '(^|[^[:alnum:]_-])--root([^[:alnum:]_-]|$)' \
-  || { echo "skip: installed treehouse lacks get --root (2.2.0 or newer required)"; exit 0; }
 
 TMP_ROOT=$(fm_test_tmproot fm-secondmate-pool-root)
 USER_HOME="$TMP_ROOT/user-home"
 PANES="$TMP_ROOT/panes"
 mkdir -p "$USER_HOME" "$PANES"
+# Every treehouse call in this suite, the version probe and the exit-time slot
+# release included, resolves its default pool under this throwaway home, never
+# the developer's real ~/.treehouse.
+export HOME="$USER_HOME"
+
+treehouse get --help 2>&1 | grep -Eq '(^|[^[:alnum:]_-])--root([^[:alnum:]_-]|$)' \
+  || { echo "skip: installed treehouse lacks get --root (2.2.0 or newer required)"; exit 0; }
 
 # Every pane shell the fake terminal started, and every slot it acquired, is
-# released on exit even when an assertion fails midway.
+# released on exit even when an assertion fails midway. A slot is returned under
+# the root it was allocated under, read back from the pooled path's
+# <root>/.treehouse/<pool>/<slot>/<repo> layout that the assertions below pin:
+# <mate>/state for the secondmate's pane, the throwaway home for the primary's.
 cleanup_panes() {
-  local pid_file pid wt_file
+  local pid_file pid wt_file wt root out
   for pid_file in "$PANES"/*/shell.pid; do
     [ -f "$pid_file" ] || continue
     pid=$(cat "$pid_file" 2>/dev/null || true)
@@ -38,8 +46,14 @@ cleanup_panes() {
   done
   for wt_file in "$PANES"/*/path; do
     [ -f "$wt_file" ] || continue
-    ( cd "$(cat "$wt_file")" 2>/dev/null && treehouse return --force "$(cat "$wt_file")" >/dev/null 2>&1 ) || true
+    wt=$(cat "$wt_file")
+    [ -d "$wt" ] || continue
+    root=${wt%/.treehouse/*}
+    if ! out=$(cd "$wt" && treehouse return --root "$root" --force "$wt" 2>&1); then
+      printf 'cleanup: treehouse return --root %s --force %s failed:\n%s\n' "$root" "$wt" "$out" >&2
+    fi
   done
+  fm_test_cleanup
 }
 trap cleanup_panes EXIT
 
