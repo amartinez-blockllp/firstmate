@@ -52,7 +52,10 @@
 #          on a feature branch instead of its default branch - a crewmate's work
 #          landed in the primary instead of its own worktree; restore it per the line.
 #          treehouse is also MISSING when its installed version lacks
-#          "treehouse get --lease" support.
+#          "treehouse get --lease" support, or, in a secondmate home, lacks
+#          "treehouse get --root" support (treehouse 2.2.0 or newer), because such
+#          a home pools its task worktrees under its own root
+#          (bin/fm-wake-lib.sh's fm_treehouse_pool_root owns that contract).
 #          no-mistakes is also MISSING when its installed version is older than
 #          1.46.0 (structured pipeline attestation floor; see CONTRIBUTING.md).
 #          The AXI-family floor policy is owned beside GH_AXI_MIN and
@@ -911,6 +914,22 @@ treehouse_supports_lease() {
   treehouse get --help 2>&1 | grep -Eq '(^|[^[:alnum:]_-])--lease([^[:alnum:]_-]|$)'
 }
 
+treehouse_supports_root() {
+  treehouse get --help 2>&1 | grep -Eq '(^|[^[:alnum:]_-])--root([^[:alnum:]_-]|$)'
+}
+
+# Whether this home pools task worktrees under its own root, which is the one
+# case that needs `treehouse get --root`; bin/fm-wake-lib.sh owns the decision.
+home_pools_under_own_treehouse_root() {
+  local pool_root
+  if ! command -v fm_treehouse_pool_root >/dev/null 2>&1; then
+    # shellcheck source=bin/fm-wake-lib.sh disable=SC1091
+    . "$SCRIPT_DIR/fm-wake-lib.sh"
+  fi
+  pool_root=$(fm_treehouse_pool_root "$FM_HOME" 2>/dev/null) || return 1
+  [ -n "$pool_root" ]
+}
+
 # Shared semantic-version floor for the tool gates below. A version string that
 # cannot be parsed into exactly one major.minor.patch triple is incompatible,
 # never assumed current, so a development or vendored build cannot pass a floor
@@ -1415,9 +1434,15 @@ detect_local_tools() {
   # The treehouse lease-support upgrade check is only relevant when the resolved
   # backend actually requires treehouse (every backend except orca, which owns its
   # own worktrees); an orca home must not be told to upgrade a provider it never uses.
+  # A secondmate home additionally needs `treehouse get --root`, because its task
+  # worktrees pool under the home's own root; a primary home never probes for it.
   if fm_backend_list_contains "$TOOLS" treehouse \
-    && command -v treehouse >/dev/null 2>&1 && ! treehouse_supports_lease; then
-    echo "MISSING: treehouse (install: $(install_cmd treehouse))"
+    && command -v treehouse >/dev/null 2>&1; then
+    if ! treehouse_supports_lease; then
+      echo "MISSING: treehouse (install: $(install_cmd treehouse))"
+    elif home_pools_under_own_treehouse_root && ! treehouse_supports_root; then
+      echo "MISSING: treehouse (install: $(install_cmd treehouse))"
+    fi
   fi
   if command -v no-mistakes >/dev/null 2>&1 && ! tool_version_at_least no-mistakes "$NO_MISTAKES_MIN"; then
     echo "MISSING: no-mistakes (install: $(install_cmd no-mistakes))"

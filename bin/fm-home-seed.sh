@@ -9,7 +9,11 @@
 #       no live process and is never recycled until the lease is released with
 #       "treehouse return". Projects are cloned
 #       from the active home into the secondmate home's projects/ directory.
-#       That project list is non-exclusive provisioning data. Pass --no-projects
+#       Each seeded clone is a separate clone of the same origin, and the seeded
+#       home's task worktrees later pool under that home's own state/ rather
+#       than the primary's pool (bin/fm-wake-lib.sh's fm_treehouse_pool_root
+#       owns that contract), so nothing here writes treehouse configuration into
+#       a clone. That project list is non-exclusive provisioning data. Pass --no-projects
 #       instead of a project list to seed a project-less home for a domain whose
 #       subject is the firstmate repo itself; it is mutually exclusive with a
 #       project list, and omitting both still fails loudly. A project-less seed

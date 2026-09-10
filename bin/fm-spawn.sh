@@ -119,6 +119,18 @@
 #   fm_firstmate_root_home resolves, so a home seeded from another machine anchors
 #   that lock itself rather than failing to resolve one;
 #   contention refuses rather than waits.
+#   A fresh Treehouse-backed spawn also pools its slot under the root that
+#   bin/fm-wake-lib.sh's fm_treehouse_pool_root resolves for this home: a primary
+#   home types a plain `treehouse get` and keeps treehouse's own default pool, while
+#   a secondmate home types `treehouse get --root <home>/state` so its slot is a
+#   linked worktree of that home's OWN project clone rather than of a primary clone
+#   that happens to share the repository identity (that helper's comment owns the
+#   why). The resolved root is recorded as treehouse_root= in the task's meta (absent
+#   for the default pool) so teardown returns the slot under the same root, and it
+#   also keys the project-identity lock above so two homes' private pools never
+#   refuse each other. A secondmate home refuses to spawn, before any endpoint
+#   exists, when the installed treehouse's `get --help` does not advertise --root
+#   (treehouse 2.2.0 or newer); a primary home never probes it.
 #   With no harness arg, a crewmate/scout spawn resolves the CREW harness only when
 #   config/crew-dispatch.json is absent. When that file exists, crewmate/scout
 #   spawns require an explicit harness so firstmate cannot silently skip dispatch
@@ -2181,8 +2193,21 @@ else
   WT=""
   BRIEF="$DATA/$ID/brief.md"
 fi
+SPAWN_TREEHOUSE_ROOT=
+SPAWN_TREEHOUSE_GET_COMMAND='treehouse get'
 if [ "$RELAUNCH" -eq 0 ] && [ "$KIND" != secondmate ] && [ "$BACKEND" != orca ]; then
-  SPAWN_TREEHOUSE_PROJECT_LOCK=$(fm_treehouse_project_lock_path "$PROJ_ABS") || {
+  SPAWN_TREEHOUSE_ROOT=$(fm_treehouse_pool_root "$FM_HOME") || {
+    echo "error: could not resolve the Treehouse pool root for home $FM_HOME" >&2
+    exit 1
+  }
+  if [ -n "$SPAWN_TREEHOUSE_ROOT" ]; then
+    if ! treehouse get --help 2>&1 | grep -Eq '(^|[^[:alnum:]_-])--root([^[:alnum:]_-]|$)'; then
+      echo "error: this secondmate home pools task worktrees under $SPAWN_TREEHOUSE_ROOT, which needs treehouse 2.2.0 or newer (treehouse get --root); upgrade treehouse before spawning here" >&2
+      exit 1
+    fi
+    SPAWN_TREEHOUSE_GET_COMMAND="treehouse get --root $(shell_quote "$SPAWN_TREEHOUSE_ROOT")"
+  fi
+  SPAWN_TREEHOUSE_PROJECT_LOCK=$(fm_treehouse_project_lock_path "$PROJ_ABS" "$SPAWN_TREEHOUSE_ROOT") || {
     echo "error: could not resolve the shared Treehouse project lock for $PROJ_ABS" >&2
     exit 1
   }
@@ -3061,7 +3086,9 @@ if [ "$RELAUNCH" -eq 1 ]; then
   fi
   [ "$KIND" = secondmate ] || validate_spawn_worktree "relaunch" "$T"
 elif [ "$KIND" != secondmate ] && [ "$BACKEND" != orca ]; then
-  spawn_send_text_line "$WT_TARGET" 'treehouse get'
+  # The pool root this home allocates under is settled above, where the lock
+  # was keyed by it; the typed line only carries that decision to the pane.
+  spawn_send_text_line "$WT_TARGET" "$SPAWN_TREEHOUSE_GET_COMMAND"
 
   # Wait for the treehouse subshell: the pane's cwd moves from the project to the worktree.
   # Target the stable window id, not the name: if the name is ever lost (e.g. an
@@ -3625,6 +3652,9 @@ preserve_relaunch_meta() {
   echo "endpoint_task_id=$ID"
   echo "worktree=$WT"
   echo "project=$PROJ_ABS"
+  # Written only when this home pools under its own root, so a primary home's
+  # meta stays byte-identical; absent treehouse_root= means treehouse's default pool.
+  [ -z "$SPAWN_TREEHOUSE_ROOT" ] || echo "treehouse_root=$SPAWN_TREEHOUSE_ROOT"
   echo "harness=$HARNESS"
   echo "kind=$KIND"
   [ -z "$MODE" ] || echo "mode=$MODE"
