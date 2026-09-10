@@ -124,7 +124,9 @@
 # child runtime endpoints, and removes the retired home. Removing a leased home
 # releases its durable treehouse lease so the pool slot is freed,
 # never left leased forever. If the treehouse return fails, teardown leaves the
-# leased home and state in place instead of hiding a still-held lease.
+# leased home and state in place instead of hiding a still-held lease. Once the
+# home is gone, its private task-worktree pool root outside the home goes too
+# (remove_firstmate_home_pool_root below).
 # Usage: fm-teardown.sh <task-id> [--force] [--legacy-record]
 #   --force skips ordinary-task dirty and landed-work checks, skips scout report
 #   checks, and discards secondmate child work for kind=secondmate. Only use it
@@ -2372,11 +2374,13 @@ EOF
 }
 
 remove_firstmate_home() {
-  local home=$1 label=$2 expected_id=${3:-} abs_home_path process_event_backup
+  local home=$1 label=$2 expected_id=${3:-} abs_home_path process_event_backup pool_root
   [ -n "$home" ] || return 0
   [ -e "$home" ] || return 0
   abs_home_path=$(validate_firstmate_home_for_removal "$home" "$label" "$expected_id") || return 1
   [ -n "$abs_home_path" ] || return 0
+  # Resolved now, while the home's marker still names it.
+  pool_root=$(fm_treehouse_pool_root "$abs_home_path" 2>/dev/null) || pool_root=
   process_event_backup=$(snapshot_firstmate_home_process_events "$abs_home_path" "$label") || return 1
   if ! cleanup_firstmate_home_process_events "$abs_home_path" "$label"; then
     restore_firstmate_home_process_events "$abs_home_path" "$label" "$process_event_backup" || return $?
@@ -2394,14 +2398,36 @@ remove_firstmate_home() {
       return 1
     }
     [ -z "$process_event_backup" ] || rm -rf -- "$process_event_backup"
+    remove_firstmate_home_pool_root "$pool_root" "$label"
     return 0
   fi
   if safe_rm_rf "$abs_home_path" "$label"; then
     [ -z "$process_event_backup" ] || rm -rf -- "$process_event_backup"
+    remove_firstmate_home_pool_root "$pool_root" "$label"
     return 0
   fi
   restore_firstmate_home_process_events "$abs_home_path" "$label" "$process_event_backup" || return $?
   return 1
+}
+
+# A secondmate home's task worktrees pool under a root outside the home
+# (bin/fm-primary-scope-lib.sh's fm_treehouse_pool_root), so they do not leave
+# with it. Once the home is gone, that private root holds only slots of the
+# clones just removed - retirement refused in-flight work or tore every child
+# down first - which is exactly what an in-home pool lost with the home, so it
+# goes too. The home is already removed here, so a root that cannot go is
+# reported and left rather than failing the retirement halfway.
+remove_firstmate_home_pool_root() {  # <pool-root> <label>
+  local root=$1 label=$2
+  [ -n "$root" ] || return 0
+  [ -e "$root" ] || [ -L "$root" ] || return 0
+  if [ -L "$root" ] || [ ! -d "$root" ]; then
+    echo "teardown: left $label task-worktree pool $root in place because it is not a plain directory" >&2
+    return 0
+  fi
+  rm -rf -- "$root" 2>/dev/null \
+    || echo "teardown: could not fully remove $label task-worktree pool $root" >&2
+  return 0
 }
 
 firstmate_home_has_process_events() {

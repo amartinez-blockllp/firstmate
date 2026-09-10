@@ -1519,8 +1519,25 @@ test_fm_send_refuses_bare_window_without_home_meta() {
   pass "fm-send refuses a bare firstmate window with no metadata in this home"
 }
 
+# The task-worktree pool root bin/fm-primary-scope-lib.sh resolves for a
+# secondmate home under <xdg-state-home>, created with one idle slot in it, plus
+# another home's pool beside it that retiring this one must never touch.
+make_home_pool_root() {  # <home> <xdg-state-home>
+  local root
+  root=$(XDG_STATE_HOME=$2 bash -c '. "$1"; fm_treehouse_pool_root "$2"' _ \
+    "$ROOT/bin/fm-primary-scope-lib.sh" "$1") || return 1
+  [ -n "$root" ] || return 1
+  mkdir -p "$root/.treehouse/app-000000/1/app" "$2/firstmate/treehouse-pools/other-000000000000"
+  printf '%s\n' "$root"
+}
+
+assert_home_pool_root_retired() {  # <pool-root> <xdg-state-home>
+  [ ! -e "$1" ] || fail "teardown left the retired home's task-worktree pool at $1"
+  [ -d "$2/firstmate/treehouse-pools/other-000000000000" ] || fail "teardown removed another home's task-worktree pool"
+}
+
 test_secondmate_teardown_retires_empty_home() {
-  local home subhome subhome_abs fakebin log lease fmroot
+  local home subhome subhome_abs fakebin log lease fmroot xdg pool
   home="$TMP_ROOT/teardown-home"
   subhome="$TMP_ROOT/teardown-subhome"
   fmroot="$TMP_ROOT/teardown-fmroot"
@@ -1529,6 +1546,8 @@ test_secondmate_teardown_retires_empty_home() {
   mkdir -p "$home/state" "$home/data" "$subhome/state"
   printf 'domain\n' > "$subhome/.fm-secondmate-home"
   subhome_abs=$(cd "$subhome" && pwd -P)
+  xdg="$TMP_ROOT/teardown-xdg"
+  pool=$(make_home_pool_root "$subhome" "$xdg") || fail "could not stage the home's task-worktree pool"
   cat > "$home/state/domain.meta" <<EOF
 window=firstmate:fm-domain
 worktree=$subhome
@@ -1546,15 +1565,16 @@ EOF
   lease="$TMP_ROOT/teardown-fake/lease"
   printf 'domain\n' > "$lease"
   PATH="$fakebin:$PATH" FM_ROOT_OVERRIDE="$fmroot" FM_HOME="$home" FM_FAKE_TMUX_LOG="$log" FM_FAKE_TMUX_CAPTURE="$TMP_ROOT/teardown-fake/pane.txt" \
-    FM_FAKE_TREEHOUSE_LEASE_FILE="$lease" \
+    FM_FAKE_TREEHOUSE_LEASE_FILE="$lease" XDG_STATE_HOME="$xdg" \
     "$ROOT/bin/fm-teardown.sh" domain >/dev/null 2>/dev/null \
     || fail "teardown failed for empty secondmate home"
   grep -F "treehouse return --force $subhome_abs" "$log" >/dev/null || fail "teardown did not release the secondmate home lease via treehouse return"
   [ ! -e "$lease" ] || fail "teardown left the secondmate home lease held after retirement"
   [ ! -d "$subhome" ] || fail "teardown did not remove the retired secondmate home"
+  assert_home_pool_root_retired "$pool" "$xdg"
   [ ! -e "$home/state/domain.meta" ] || fail "teardown did not clear parent meta"
   grep -F -- '- domain ' "$home/data/secondmates.md" >/dev/null && fail "teardown did not remove secondmate registry route"
-  pass "secondmate teardown retires empty homes and releases routing"
+  pass "secondmate teardown retires empty homes, their task-worktree pool, and routing"
 }
 
 test_secondmate_teardown_refuses_ambiguous_and_mismatched_registry_bindings() {
@@ -1791,7 +1811,7 @@ EOF
 }
 
 test_secondmate_teardown_refuses_failed_leased_home_return() {
-  local home subhome subhome_abs fakebin log fmroot err rc sweep_log rearm_log backup
+  local home subhome subhome_abs fakebin log fmroot err rc sweep_log rearm_log backup xdg pool
   home="$TMP_ROOT/teardown-return-fail-home"
   subhome="$TMP_ROOT/teardown-return-fail-subhome"
   fmroot="$TMP_ROOT/teardown-return-fail-fmroot"
@@ -1802,6 +1822,8 @@ test_secondmate_teardown_refuses_failed_leased_home_return() {
   git -C "$fmroot" worktree add --quiet --detach "$subhome" HEAD
   mkdir -p "$home/state" "$home/data" "$subhome/state/procevent"
   printf 'domain\n' > "$subhome/.fm-secondmate-home"
+  xdg="$TMP_ROOT/teardown-return-fail-xdg"
+  pool=$(make_home_pool_root "$subhome" "$xdg") || fail "could not stage the home's task-worktree pool"
   printf 'adapter=lavish\nargc=1\nargv:\n/bin/true\n' > "$subhome/state/procevent/source.source"
   install_fake_process_event_sweep "$subhome" "$sweep_log"
   : > "$rearm_log"
@@ -1824,12 +1846,13 @@ EOF
   set +e
   PATH="$fakebin:$PATH" FM_ROOT_OVERRIDE="$fmroot" FM_HOME="$home" FM_FAKE_TMUX_LOG="$log" FM_FAKE_TMUX_CAPTURE="$TMP_ROOT/teardown-return-fail-fake/pane.txt" \
     FM_FAKE_PROCEVENT_SWEEP_LOG="$sweep_log" FM_FAKE_PROCEVENT_REARM_LOG="$rearm_log" \
-    FM_FAKE_TREEHOUSE_RETURN_FAIL=1 \
+    FM_FAKE_TREEHOUSE_RETURN_FAIL=1 XDG_STATE_HOME="$xdg" \
     "$ROOT/bin/fm-teardown.sh" domain >/dev/null 2>"$err"
   rc=$?
   set -e
 
   [ "$rc" -ne 0 ] || fail "teardown succeeded despite failed treehouse return"
+  [ -d "$pool/.treehouse/app-000000/1/app" ] || fail "teardown removed the home's task-worktree pool although the home itself stayed"
   grep -F "treehouse return --force $subhome_abs" "$log" >/dev/null || fail "teardown did not try to return the leased home"
   grep -F 'treehouse return failed for secondmate home' "$err" >/dev/null || fail "teardown did not report failed leased home return"
   [ -d "$subhome" ] || fail "teardown removed a leased home after return failed"
@@ -1855,13 +1878,15 @@ EOF
 }
 
 test_secondmate_teardown_removes_plain_clone_home_without_treehouse_return() {
-  local home subhome subhome_abs fakebin log
+  local home subhome subhome_abs fakebin log xdg pool
   home="$TMP_ROOT/plain-clone-teardown-home"
   subhome="$TMP_ROOT/plain-clone-teardown-subhome"
   mkdir -p "$home/state" "$home/data" "$subhome/state"
   mark_firstmate_home "$subhome"
   printf 'domain\n' > "$subhome/.fm-secondmate-home"
   subhome_abs=$(cd "$subhome" && pwd -P)
+  xdg="$TMP_ROOT/plain-clone-teardown-xdg"
+  pool=$(make_home_pool_root "$subhome" "$xdg") || fail "could not stage the home's task-worktree pool"
   cat > "$home/state/domain.meta" <<EOF
 window=firstmate:fm-domain
 worktree=$subhome
@@ -1878,11 +1903,12 @@ EOF
   log="$TMP_ROOT/plain-clone-teardown-fake/tmux.log"
 
   PATH="$fakebin:$PATH" FM_HOME="$home" FM_FAKE_TMUX_LOG="$log" FM_FAKE_TMUX_CAPTURE="$TMP_ROOT/plain-clone-teardown-fake/pane.txt" \
-    FM_FAKE_TREEHOUSE_RETURN_FAIL=1 \
+    FM_FAKE_TREEHOUSE_RETURN_FAIL=1 XDG_STATE_HOME="$xdg" \
     "$ROOT/bin/fm-teardown.sh" domain >/dev/null 2>/dev/null \
     || fail "teardown failed for plain-clone secondmate home"
   grep -F "treehouse return --force $subhome_abs" "$log" >/dev/null && fail "teardown tried to return a plain-clone home through treehouse"
   [ ! -d "$subhome" ] || fail "teardown did not remove the plain-clone secondmate home"
+  assert_home_pool_root_retired "$pool" "$xdg"
   [ ! -e "$home/state/domain.meta" ] || fail "teardown did not clear parent meta for plain-clone home"
   grep -F -- '- domain ' "$home/data/secondmates.md" >/dev/null && fail "teardown did not remove plain-clone registry route"
   pass "secondmate teardown raw-removes plain-clone homes"

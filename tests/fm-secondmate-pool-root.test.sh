@@ -12,7 +12,10 @@
 # `treehouse get` line, and asserts the pooled worktree's git common dir is the
 # SECONDMATE's clone, not the primary's. The primary's own spawn of the same
 # project must keep landing in treehouse's default pool, and bin/fm-teardown.sh
-# must return the secondmate's slot under the recorded root.
+# must return the secondmate's slot under the recorded root. The secondmate's
+# pool must also sit outside its home, with no CLAUDE.md or AGENTS.md anywhere
+# above the slot, because Claude Code loads every ancestor's CLAUDE.md and a
+# home's imports firstmate's own supervisor contract.
 set -u
 
 # shellcheck source=tests/fixtures.sh
@@ -26,8 +29,10 @@ PANES="$TMP_ROOT/panes"
 mkdir -p "$USER_HOME" "$PANES"
 # Every treehouse call in this suite, the version probe and the exit-time slot
 # release included, resolves its default pool under this throwaway home, never
-# the developer's real ~/.treehouse.
+# the developer's real ~/.treehouse; the secondmate's per-home pool root derives
+# from the user state base, which is emptied so it falls back to that home too.
 export HOME="$USER_HOME"
+export XDG_STATE_HOME=
 
 bash -c '. "$1"; fm_treehouse_supports_root' _ "$ROOT/bin/fm-primary-scope-lib.sh" \
   || { echo "skip: installed treehouse lacks get --root (2.2.0 or newer required)"; exit 0; }
@@ -36,7 +41,7 @@ bash -c '. "$1"; fm_treehouse_supports_root' _ "$ROOT/bin/fm-primary-scope-lib.s
 # released on exit even when an assertion fails midway. A slot is returned under
 # the root it was allocated under, read back from the pooled path's
 # <root>/.treehouse/<pool>/<slot>/<repo> layout that the assertions below pin:
-# <mate>/state for the secondmate's pane, the throwaway home for the primary's.
+# the secondmate's per-home root for its pane, the throwaway home for the primary's.
 cleanup_panes() {
   local pid_file pid wt_file wt root project out
   for pid_file in "$PANES"/*/shell.pid; do
@@ -160,7 +165,7 @@ run_spawn() {
 }
 
 test_seeded_secondmate_pools_worktrees_of_its_own_clone() {
-  local primary mate origin id mate_id out status wt wt_common mate_common primary_common pane
+  local primary mate origin id mate_id out status wt wt_common mate_common primary_common pane mate_root dir
   primary="$TMP_ROOT/primary"
   mate="$TMP_ROOT/mate"
   origin="$TMP_ROOT/remotes/app.git"
@@ -185,6 +190,11 @@ test_seeded_secondmate_pools_worktrees_of_its_own_clone() {
   primary_common=$(common_dir_of "$primary/projects/app") || fail "the primary project clone is not a git repository"
   assert_not_equals "$primary_common" "$mate_common" "seeding did not give the secondmate its own clone"
   mkdir -p "$mate/config" "$mate/state"
+  # A live home is a firstmate checkout whose CLAUDE.md imports AGENTS.md; make
+  # this one carry the same pair so the ancestor walk below would catch a slot
+  # pooled inside it.
+  [ -e "$mate/AGENTS.md" ] || printf '# Firstmate\n' > "$mate/AGENTS.md"
+  [ -e "$mate/CLAUDE.md" ] || printf '@AGENTS.md\n' > "$mate/CLAUDE.md"
   printf 'codex\n' > "$mate/config/crew-harness"
   touch "$mate/state/.last-watcher-beat"
 
@@ -206,15 +216,28 @@ test_seeded_secondmate_pools_worktrees_of_its_own_clone() {
     "the secondmate's pooled worktree is not a worktree of the secondmate's own clone"
   assert_not_equals "$primary_common" "$wt_common" \
     "the secondmate's pooled worktree belongs to the primary's clone"
-  case "$wt" in
-    "$(cd "$mate" && pwd -P)/state/.treehouse/"*) ;;
-    *) fail "the secondmate's slot was not pooled under its own state/: $wt" ;;
+  mate_root=$(sed -n 's/^treehouse_root=//p' "$mate/state/$mate_id.meta")
+  case "$mate_root" in
+    "$USER_HOME/.local/state/firstmate/treehouse-pools/connect-"?*) ;;
+    *) fail "the secondmate spawn did not record a per-home pool root under the user state base: ${mate_root:-<none>}" ;;
   esac
-  assert_grep "treehouse_root=$(cd "$mate" && pwd -P)/state" "$mate/state/$mate_id.meta" \
-    "the secondmate spawn did not record its pool root"
-  out=$(cd "$mate/projects/app" && treehouse status --root "$mate/state" 2>&1)
-  assert_contains "$out" "$wt" "treehouse does not list the slot under the secondmate's root"$'\n'"$out"
-  pass "a seeded secondmate pools a shared project's worktree from its own clone"
+  case "$wt" in
+    "$mate_root/.treehouse/"*) ;;
+    *) fail "the secondmate's slot was not pooled under its recorded root $mate_root: $wt" ;;
+  esac
+  dir=$wt
+  while [ -n "$dir" ]; do
+    [ "$dir" = "$wt" ] || { [ ! -e "$dir/CLAUDE.md" ] && [ ! -e "$dir/AGENTS.md" ]; } \
+      || fail "the secondmate's slot sits under agent instructions at $dir: $wt"
+    dir=${dir%/*}
+  done
+  out=$(cd "$mate/projects/app" && treehouse status --root "$mate_root" 2>&1)
+  # treehouse status abbreviates a path under HOME to ~, and the root is there.
+  case "$out" in
+    *"$wt"* | *"~${wt#"$USER_HOME"}"*) ;;
+    *) fail "treehouse does not list the slot under the secondmate's root"$'\n'"$out" ;;
+  esac
+  pass "a seeded secondmate pools a shared project's worktree from its own clone, outside its home"
 
   # The primary's own spawn of the same project stays in treehouse's default pool.
   id='primary-pool-root-r1'
@@ -254,7 +277,7 @@ test_seeded_secondmate_pools_worktrees_of_its_own_clone() {
   status=$?
   expect_code 0 "$status" "teardown of the secondmate's scout should succeed"$'\n'"$out"
   assert_absent "$mate/state/$mate_id.meta" "teardown left the secondmate's task record behind"
-  out=$(cd "$mate/projects/app" && treehouse status --root "$mate/state" 2>&1)
+  out=$(cd "$mate/projects/app" && treehouse status --root "$mate_root" 2>&1)
   assert_contains "$out" "available" "the secondmate's slot was not returned to its own pool"$'\n'"$out"
   assert_not_contains "$out" "in-use" "the secondmate's slot is still in use after teardown"$'\n'"$out"
   rm -f "$pane/path"

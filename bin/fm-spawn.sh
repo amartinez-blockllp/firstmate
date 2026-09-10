@@ -122,13 +122,14 @@
 #   A fresh Treehouse-backed spawn also pools its slot under the root that
 #   bin/fm-primary-scope-lib.sh's fm_treehouse_pool_root resolves for this home: a primary
 #   home types a plain `treehouse get` and keeps treehouse's own default pool, while
-#   a secondmate home types `treehouse get --root <home>/state` so its slot is a
+#   a secondmate home types `treehouse get --root <per-home root>` so its slot is a
 #   linked worktree of that home's OWN project clone rather than of a primary clone
-#   that happens to share the repository identity (that helper's comment owns the
-#   why). The resolved root is recorded as treehouse_root= in the task's meta (absent
-#   for the default pool) so teardown returns the slot under the same root, and it
-#   also keys the project-identity lock above so two homes' private pools never
-#   refuse each other. A secondmate home refuses to spawn, before any endpoint
+#   that happens to share the repository identity, placed outside the home so no
+#   firstmate instructions sit above the worker (that helper's comment owns the
+#   location and the why). The resolved root is recorded as treehouse_root= in
+#   the task's meta (absent for the default pool) so teardown returns the slot
+#   under the same root, and it also keys the project-identity lock above so two
+#   homes' private pools never refuse each other. A secondmate home refuses to spawn, before any endpoint
 #   exists, when the installed treehouse's `get --help` does not advertise --root
 #   (treehouse 2.2.0 or newer); a primary home never probes it.
 #   With no harness arg, a crewmate/scout spawn resolves the CREW harness only when
