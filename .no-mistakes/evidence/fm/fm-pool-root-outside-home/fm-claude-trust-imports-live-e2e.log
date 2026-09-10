@@ -1,0 +1,3 @@
+ok - claude 2.1.268 (Claude Code): an unanswered ancestor import raises the prompt
+note: claude 2.1.268 (Claude Code) reads the import answer from the main checkout entry, not the worktree entry
+ok - claude 2.1.268 (Claude Code): the registered answer suppresses the prompt and the worker reaches its composer

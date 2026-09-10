@@ -1,0 +1,7 @@
+ok - a secondmate home pools outside itself, with no firstmate instructions above its slots
+ok - the pool root is unique per home even when two homes share an id
+ok - a secondmate home refuses a pool root under a firstmate checkout or a relative state base
+ok - a primary home keeps the plain treehouse get and byte-identical metadata
+ok - a secondmate home refuses to spawn on a treehouse without --root, before any endpoint exists
+ok - teardown returns an old in-home slot and a new outside slot each under its recorded root
+# all fm-spawn-pool-root tests passed

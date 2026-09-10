@@ -1,0 +1,21 @@
+=== S5: primary home - worker slot in treehouse's default pool, a user's own stored Yes
+  primary is a firstmate checkout: /private/tmp/fm-live-EMBXH8/primary/CLAUDE.md /private/tmp/fm-live-EMBXH8/primary/bin/fm-spawn.sh 
+  fm_treehouse_pool_root primary -> '' (empty = plain treehouse get)
+  real treehouse default-pool slot: /private/tmp/fm-live-EMBXH8/user-home/.treehouse/app-05faee/1/app
+  this change: trusted: /private/tmp/fm-live-EMBXH8/user-home/.treehouse/app-05faee/1/app
+  base 8ac686e: trusted: /private/tmp/fm-live-EMBXH8/user-home/.treehouse/app-05faee/1/app
+  sha1 after, this change: a0816da8e3c3290e48790f153e7eb973cb001c01
+  sha1 after, base       : a0816da8e3c3290e48790f153e7eb973cb001c01
+  RESULT: stores byte-identical
+  main-checkout entry after this change:
+     {"allowedTools":["Bash(make)"],"hasTrustDialogAccepted":true,"hasClaudeMdExternalIncludesWarningShown":true,"hasClaudeMdExternalIncludesApproved":true}
+  worktree entry after this change:
+     {"hasTrustDialogAccepted":true}
+
+=== S6: adversarial pool-root placements for the secondmate home
+  XDG_STATE_HOME inside the home               rc=1  error: secondmate connect's task-worktree pool /private/tmp/fm-live-EMBXH8/mate/state/firstmate/treehouse-pools/connect-d13a41ae2436 would sit under the firstmate checkout /private/tmp/fm-live-EMBXH8/mate, whose instructions every worker there would load
+  XDG_STATE_HOME spelled into home via ..      rc=1  error: secondmate connect's task-worktree pool /private/tmp/fm-live-EMBXH8/user-home/../mate/state/firstmate/treehouse-pools/connect-d13a41ae2436 would sit under the firstmate checkout /private/tmp/fm-live-EMBXH8/user-home/../mate, whose instructions every worker there would load
+  XDG_STATE_HOME relative                      rc=1  error: cannot place secondmate connect's task-worktree pool: XDG_STATE_HOME or HOME must be an absolute path
+  XDG unset, HOME inside the home              rc=1  error: secondmate connect's task-worktree pool /private/tmp/fm-live-EMBXH8/mate/user/.local/state/firstmate/treehouse-pools/connect-d13a41ae2436 would sit under the firstmate checkout /private/tmp/fm-live-EMBXH8/mate, whose instructions every worker there would load
+  XDG unset, HOME empty                        rc=0  /private/tmp/fm-live-EMBXH8/user-home/.local/state/firstmate/treehouse-pools/connect-d13a41ae2436
+  XDG_STATE_HOME a symlink into the home       rc=0  /private/tmp/fm-live-EMBXH8/state-link/firstmate/treehouse-pools/connect-d13a41ae2436

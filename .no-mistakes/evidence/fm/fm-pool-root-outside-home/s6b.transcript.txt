@@ -1,0 +1,22 @@
+=== S6 (cont.): XDG unset, HOME empty
+  rc=1  error: cannot place secondmate connect's task-worktree pool: XDG_STATE_HOME or HOME must be an absolute path
+
+=== S6b: XDG_STATE_HOME is a symlink into the home (/private/tmp/fm-live-EMBXH8/state-link -> /private/tmp/fm-live-EMBXH8/mate/state): what a worker sees
+  pool root (literal): /private/tmp/fm-live-EMBXH8/state-link/firstmate/treehouse-pools/connect-d13a41ae2436
+  slot: /private/tmp/fm-live-EMBXH8/state-link/firstmate/treehouse-pools/connect-d13a41ae2436/.treehouse/app-05faee/1/app
+  slot resolved: /private/tmp/fm-live-EMBXH8/mate/state/firstmate/treehouse-pools/connect-d13a41ae2436/.treehouse/app-05faee/1/app
+  trusted: /private/tmp/fm-live-EMBXH8/mate/state/firstmate/treehouse-pools/connect-d13a41ae2436/.treehouse/app-05faee/1/app
+     {
+      "/private/tmp/fm-live-EMBXH8/mate/projects/app": {
+       "hasClaudeMdExternalIncludesWarningShown": true,
+       "hasClaudeMdExternalIncludesApproved": false
+      },
+      "/private/tmp/fm-live-EMBXH8/mate/state/firstmate/treehouse-pools/connect-d13a41ae2436/.treehouse/app-05faee/1/app": {
+       "hasClaudeMdExternalIncludesWarningShown": true,
+       "hasClaudeMdExternalIncludesApproved": false,
+       "hasTrustDialogAccepted": true
+      }
+     }
+  screen: no import prompt
+  /context Memory files: 4 tokens (0.0%)
+  [DEBUG] "Loaded 1 CLAUDE.md/rules files:\n  [Project] /private/tmp/fm-live-EMBXH8/mate/CLAUDE.md (11 chars)"

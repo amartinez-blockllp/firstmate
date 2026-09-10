@@ -1,0 +1,14 @@
+$ fm_treehouse_pool_root $LAB/mate   # HOME=/private/tmp/fm-live-EMBXH8/user-home, XDG_STATE_HOME unset
+/private/tmp/fm-live-EMBXH8/user-home/.local/state/firstmate/treehouse-pools/connect-d13a41ae2436
+$ fm_treehouse_pool_root (second resolution, stability)
+/private/tmp/fm-live-EMBXH8/user-home/.local/state/firstmate/treehouse-pools/connect-d13a41ae2436
+$ cd $LAB/mate/projects/app && treehouse get --lease --no-fetch --root "/private/tmp/fm-live-EMBXH8/user-home/.local/state/firstmate/treehouse-pools/connect-d13a41ae2436"
+slot=/private/tmp/fm-live-EMBXH8/user-home/.local/state/firstmate/treehouse-pools/connect-d13a41ae2436/.treehouse/app-05faee/1/app
+$ git -C slot rev-parse --git-common-dir
+/private/tmp/fm-live-EMBXH8/mate/projects/app/.git
+home's own clone common dir: /private/tmp/fm-live-EMBXH8/mate/projects/app/.git
+slot is outside the home (/private/tmp/fm-live-EMBXH8/mate)
+ancestor CLAUDE.md / AGENTS.md above the slot:
+  (none)
+$ treehouse status --root ...
+1     leased       ~/.local/state/firstmate/treehouse-pools/connect-d13a41ae2436/.treehouse/app-05faee/1/app

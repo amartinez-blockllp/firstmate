@@ -1,0 +1,68 @@
+ ▐▛███▛█ Claude Code v2.1.268
+▝▜██████▀ Opus 5 (1M context) · API Usage Billing
+ ▝▝ ▝▝ /private/tmp/fm-live-EMBXH8/mate/state/.treehouse/app-05faee/1/app
+
+▎ Debug mode enabled · logging to /private/tmp/fm-live-EMBXH8/cfg-s4a/debug/4558c4c2-4160-4d82-944b-b59a81e18898.txt
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯  
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ ⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents Not logged in · Run /login
+ ● high · /effort
+ Debug
+ >0q  /context  /context Visualize current context usage as a colored grid  /doctor Health-check the user's Claude Code setup and fix issues: diagnose installation health — what the `claude doctor` terminal  diagnostics cover — from local data (duplicate or leftover installs, PATH, unparseable settings files, broken or colliding ag…
+ /autocompact Set how full the context gets before auto-summarizing
+ /subtask Send a subagent off with your full context; its result comes back here
+ /clear Start a new session with empty context; previous session stays on disk (resumable with /resume)
+ /compact Free up context by summarizing the conversation so far
+ /model Set the AI model for Claude Code (currently Opus 5 (1M context))
+ /design-sync Push a React design system to claude.ai/design. This runs a converter that bundles the real component code (from Storybook or
+ a bare package) and uploads it. Use when the user runs /design-sync or says "sync my design system to Claude Design".
+ /dataviz Use this skill whenever you are about to create ANY chart, graph, plot, dashboard, or data visualization, in ANY output medium
+ — an HTML or React artifact, inline SVG, plotting code in any library (matplotlib, plotly, d3, Recharts, …), an image/PNG you…
+ /status Show Claude Code status including version, model, account, API connectivity, and tool statuses
+
+
+
+
+
+
+
+
+
+  ❯ /context   ✻ Precipitating…   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── ❯   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── ⏵⏵ ypass permissions on (shift+tab to cycle) · esc o interr pt · ← for agents Not logged in · Run /login ● high · /effort Debug                 ⎿ Context Usage ⛀ ⛁ ⛁ ⛁ ⛁ ⛁ ⛀ ⛁ ⛁ ⛁ ⛁ ⛁ ⛀ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ Opus 5 (1M context) ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ claude-opus-5[1m] ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ 59.6k/1m tokens (6%)  ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ Estimated usage by category  ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛁ Sy tem prompt: 3.2k tokens (0.3%)  ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛁ System tools: 28.5k tokens (2.8%)  ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛁ Memory files: 26k tokens (2.6%) 
+ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛁ Skills: 1.9k tokens (0.2%)
+ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝ ⛶ Free space: 907.4k (90.7%)
+ ⛝ Autocompact buffer: 33k tokens (3.3%)
+
+ Auto-compact window: 1m tokens
+
+ Memory files · /memory
+ ├ /private/tmp/fm-live-EMBXH8/mate/CLAUDE.md: 4 tokens
+ └ /private/tmp/fm-live-EMBXH8/mate/AGENTS.md: 26k tokens
+
+ Skills · /skills
+
+ Built-in
+ ├ dataviz: ~480 tokens
+ ├ claude-api: ~360 tokens
+ ├ update-config: ~240 tokens
+ ├ code-review: ~150 tokens
+ ├ run: ~120 tokens
+ ├ loop: ~120 tokens
+ ├ workflow-authoring: ~80 tokens
+ ├ keybindings-help: ~80 tokens
+ ├ artifact-diagramming: ~70 tokens
+ ├ artifact-design: ~70 tokens
+ ├ fewer-permission-prompts: ~60 tokens
+ ├ simplify: ~60 tokens
+ ├ security-review: ~30 tokens
+ └ init: ~20 tokens
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯  
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ ⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents Not logged in · Run /login
+ ● high · /effort
+ Debug
+ 

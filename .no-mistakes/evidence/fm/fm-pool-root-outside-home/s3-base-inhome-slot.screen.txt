@@ -1,0 +1,28 @@
+ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Allow external CLAUDE.md file imports?
+
+ This project's CLAUDE.md imports files outside the current working directory. Never allow this for third-party repositories.
+
+ External imports:
+ /private/tmp/fm-live-EMBXH8/mate/AGENTS.md
+
+ Important: Only use Claude Code with files you trust. Accessing untrusted files may pose security risks https://code.claude.com/docs/en/security
+
+ ❯ No, disable external imports
+ Yes, allow external imports
+
+ Enter to confirm · Esc to cancel
+ >0q >4m <u                ▐▛███▛█ Claude Code v2.1.268
+▝▜██████▀ Opus 5 (1M context) · API Usage Billing
+ ▝▝ ▝▝ /private/tmp/fm-live-EMBXH8/mate/state/.treehouse/app-05faee/1/app
+
+▎ Debug mode enabled · logging to /private/tmp/fm-live-EMBXH8/cfg-s3/debug/21a8eec2-85e0-48d8-b6f1-d309145954a8.txt
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯  
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ ⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents Not logged in · Run /login
+ ● high · /effort
+ Debug
+ >0q 

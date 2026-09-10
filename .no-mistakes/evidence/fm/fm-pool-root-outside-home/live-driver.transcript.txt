@@ -1,0 +1,85 @@
+secondmate home (real firstmate checkout at ff6706b): /private/tmp/fm-live-EMBXH8/mate
+  CLAUDE.md in home: @AGENTS.md
+  pool root, this change : /private/tmp/fm-live-EMBXH8/user-home/.local/state/firstmate/treehouse-pools/connect-d13a41ae2436
+  pool root, base 8ac686e: /private/tmp/fm-live-EMBXH8/mate/state
+
+=== S2: new worker slot (this change) - trust registered by this change's fm-claude-trust.sh
+  slot: /private/tmp/fm-live-EMBXH8/user-home/.local/state/firstmate/treehouse-pools/connect-d13a41ae2436/.treehouse/app-05faee/2/app
+  trusted: /private/tmp/fm-live-EMBXH8/user-home/.local/state/firstmate/treehouse-pools/connect-d13a41ae2436/.treehouse/app-05faee/2/app
+  store (/private/tmp/fm-live-EMBXH8/cfg-s2/.claude.json projects):
+     {
+       "/private/tmp/fm-live-EMBXH8/user-home/.local/state/firstmate/treehouse-pools/connect-d13a41ae2436/.treehouse/app-05faee/2/app": {
+         "hasTrustDialogAccepted": true
+       }
+     }
+  [s2-new-slot] screen: no import prompt
+  [s2-new-slot] screen: reached the ready composer
+  [s2-new-slot] /context: no Memory files section
+  [s2-new-slot] claude --debug memory lines:
+     [DEBUG] No CLAUDE.md/rules files found
+
+=== S3: regression reproduction - base 8ac686e pools in-home; base trust script
+  slot: /private/tmp/fm-live-EMBXH8/mate/state/.treehouse/app-05faee/1/app
+  trusted: /private/tmp/fm-live-EMBXH8/mate/state/.treehouse/app-05faee/1/app
+  store (/private/tmp/fm-live-EMBXH8/cfg-s3/.claude.json projects):
+     {
+       "/private/tmp/fm-live-EMBXH8/mate/state/.treehouse/app-05faee/1/app": {
+         "hasTrustDialogAccepted": true
+       }
+     }
+  [s3-base-inhome-slot] screen: IMPORT PROMPT SHOWN ("Allow external CLAUDE.md file imports?")
+  [s3-base-inhome-slot] /context: no Memory files section
+  [s3-base-inhome-slot] claude --debug memory lines:
+     [DEBUG] "Loaded 1 CLAUDE.md/rules files:\n  [Project] /private/tmp/fm-live-EMBXH8/mate/CLAUDE.md (11 chars)"
+     [DEBUG] [engine] send seed_read_state path=/private/tmp/fm-live-EMBXH8/mate/CLAUDE.md
+
+=== S4a: hazard control - in-home slot, a stored Yes on the main checkout entry, base trust script
+  trusted: /private/tmp/fm-live-EMBXH8/mate/state/.treehouse/app-05faee/1/app
+  store (/private/tmp/fm-live-EMBXH8/cfg-s4a/.claude.json projects):
+     {
+       "/private/tmp/fm-live-EMBXH8/mate/projects/app": {
+         "allowedTools": [
+           "Bash(ls)"
+         ],
+         "hasTrustDialogAccepted": true,
+         "hasClaudeMdExternalIncludesWarningShown": true,
+         "hasClaudeMdExternalIncludesApproved": true
+       },
+       "/private/tmp/fm-live-EMBXH8/mate/state/.treehouse/app-05faee/1/app": {
+         "hasTrustDialogAccepted": true
+       }
+     }
+  [s4a-base-inhome-stored-yes] screen: no import prompt
+  [s4a-base-inhome-stored-yes] screen: reached the ready composer
+  [s4a-base-inhome-stored-yes] /context Memory files section:
+grep: maximum repetition exceeds 255
+  [s4a-base-inhome-stored-yes] claude --debug memory lines:
+     [DEBUG] "Loaded 2 CLAUDE.md/rules files:\n  [Project] /private/tmp/fm-live-EMBXH8/mate/CLAUDE.md (11 chars)\n  [Project] /private/tmp/fm-live-EMBXH8/mate/AGENTS.md (77990 chars) (included by /private/tmp/fm-live-EMBXH8/mate/CLAUDE.md)"
+     [DEBUG] [engine] send seed_read_state path=/private/tmp/fm-live-EMBXH8/mate/AGENTS.md
+     [DEBUG] [engine] send seed_read_state path=/private/tmp/fm-live-EMBXH8/mate/CLAUDE.md
+
+=== S4b: in-flight in-home slot, a stored Yes, this change's trust script (backstop)
+  trusted: /private/tmp/fm-live-EMBXH8/mate/state/.treehouse/app-05faee/1/app
+  store (/private/tmp/fm-live-EMBXH8/cfg-s4b/.claude.json projects):
+     {
+       "/private/tmp/fm-live-EMBXH8/mate/projects/app": {
+         "allowedTools": [
+           "Bash(ls)"
+         ],
+         "hasTrustDialogAccepted": true,
+         "hasClaudeMdExternalIncludesWarningShown": true,
+         "hasClaudeMdExternalIncludesApproved": false
+       },
+       "/private/tmp/fm-live-EMBXH8/mate/state/.treehouse/app-05faee/1/app": {
+         "hasClaudeMdExternalIncludesWarningShown": true,
+         "hasClaudeMdExternalIncludesApproved": false,
+         "hasTrustDialogAccepted": true
+       }
+     }
+  [s4b-new-inhome-stored-yes] screen: no import prompt
+  [s4b-new-inhome-stored-yes] screen: reached the ready composer
+  [s4b-new-inhome-stored-yes] /context Memory files section:
+grep: maximum repetition exceeds 255
+  [s4b-new-inhome-stored-yes] claude --debug memory lines:
+     [DEBUG] "Loaded 1 CLAUDE.md/rules files:\n  [Project] /private/tmp/fm-live-EMBXH8/mate/CLAUDE.md (11 chars)"
+     [DEBUG] [engine] send seed_read_state path=/private/tmp/fm-live-EMBXH8/mate/CLAUDE.md

@@ -1,0 +1,4 @@
+ok - a seeded secondmate pools a shared project's worktree from its own clone, outside its home
+ok - the primary's spawn of the same project keeps its default pool
+ok - teardown returns the secondmate's slot under its recorded root
+# all fm-secondmate-pool-root tests passed

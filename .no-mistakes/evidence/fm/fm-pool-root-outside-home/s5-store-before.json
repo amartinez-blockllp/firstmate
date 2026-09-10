@@ -1,0 +1,17 @@
+{
+  "hasCompletedOnboarding": true,
+  "theme": "dark",
+  "projects": {
+    "/private/tmp/fm-live-EMBXH8/primary/projects/app": {
+      "allowedTools": [
+        "Bash(make)"
+      ],
+      "hasTrustDialogAccepted": true,
+      "hasClaudeMdExternalIncludesWarningShown": true,
+      "hasClaudeMdExternalIncludesApproved": true
+    },
+    "/elsewhere/proj": {
+      "hasClaudeMdExternalIncludesApproved": true
+    }
+  }
+}
