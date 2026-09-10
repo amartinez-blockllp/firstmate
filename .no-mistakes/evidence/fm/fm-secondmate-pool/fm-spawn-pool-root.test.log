@@ -1,0 +1,5 @@
+ok - a secondmate home types treehouse get --root <home>/state, records it, and locks its own pool
+ok - a primary home keeps the plain treehouse get and byte-identical metadata
+ok - a secondmate home refuses to spawn on a treehouse without --root, before any endpoint exists
+ok - teardown returns a pooled slot under the root recorded at spawn
+# all fm-spawn-pool-root tests passed

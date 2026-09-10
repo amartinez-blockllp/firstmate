@@ -1,0 +1,10 @@
+# secondmate spawn
+spawned mate-pool-root-r1 harness=codex kind=scout window=firstmate:fm-mate-pool-root-r1 worktree=/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-secondmate-pool-root.0NnkpP/mate/state/.treehouse/app-410a7c/1/app
+exit=0
+# pane treehouse log
+🌳 Setting up worktree...
+🌳 Entered worktree at /private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-secondmate-pool-root.0NnkpP/mate/state/.treehouse/app-410a7c/1/app. Type 'exit' to return.
+ok - a seeded secondmate pools a shared project's worktree from its own clone
+ok - the primary's spawn of the same project keeps its default pool
+ok - teardown returns the secondmate's slot under its recorded root
+# all fm-secondmate-pool-root tests passed

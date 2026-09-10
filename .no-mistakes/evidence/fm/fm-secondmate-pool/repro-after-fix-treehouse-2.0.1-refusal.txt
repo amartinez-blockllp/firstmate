@@ -1,0 +1,43 @@
+### tree under test: /Users/amartinez/.no-mistakes/worktrees/6e86039f9a66/01M25Y5Z9GEYJ9DEHAAYZEGDX6 (2568bf9)
+### treehouse: v2.0.1
+
+### 1. seed secondmate home 'connect' from the primary with the SAME project (bin/fm-home-seed.sh)
+scaffolded: /private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.fDL1qD/primary/data/connect/brief.md (secondmate charter)
+home=/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.fDL1qD/mate
+seed exit=0
+primary clone common dir: /private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.fDL1qD/primary/projects/app/.git
+mate    clone common dir: /private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.fDL1qD/mate/projects/app/.git
+
+### 2. PRIMARY spawns a scout for app first (its pool now exists in the default root)
+spawned primary-r1 harness=codex kind=scout window=firstmate:fm-primary-r1 worktree=/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.fDL1qD/user-home/.treehouse/app-ad41ba/1/app
+primary spawn exit=0
+typed into pane: treehouse get
+primary worktree=/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.fDL1qD/user-home/.treehouse/app-ad41ba/1/app
+  -> common dir: /private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.fDL1qD/primary/projects/app/.git
+default pool (/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.fDL1qD/user-home/.treehouse):
+app-ad41ba
+update-check.json
+
+### 2b. the primary's scout finishes: its slot is returned and sits AVAILABLE in the default pool
+  | A new version of treehouse is available: v2.0.1 → v2.3.0
+  | Run "treehouse update" to update
+  | 
+  | 🌳 Worktree returned to pool.
+  | A new version of treehouse is available: v2.0.1 → v2.3.0
+  | Run "treehouse update" to update
+  | 
+  | 1     available    ~/.treehouse/app-ad41ba/1/app
+
+### 3. SECONDMATE spawns a scout for the same project
+error: this secondmate home pools task worktrees under /private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.fDL1qD/mate/state, which needs treehouse 2.2.0 or newer (treehouse get --root); upgrade treehouse before spawning here
+secondmate spawn exit=1
+typed into pane: 
+pane treehouse log:
+secondmate published NO task meta (spawn refused)
+mate private pool (/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.fDL1qD/mate/state/.treehouse):
+  (none)
+default pool (/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.fDL1qD/user-home/.treehouse):
+app-ad41ba
+update-check.json
+
+### RESULT: secondmate spawn exit=1

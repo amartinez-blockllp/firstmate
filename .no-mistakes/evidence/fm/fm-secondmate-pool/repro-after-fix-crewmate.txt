@@ -1,0 +1,42 @@
+### tree under test: /Users/amartinez/.no-mistakes/worktrees/6e86039f9a66/01M25Y5Z9GEYJ9DEHAAYZEGDX6 (2568bf9)
+### treehouse: v2.3.0
+
+### 1. seed secondmate home 'connect' from the primary with the SAME project (bin/fm-home-seed.sh)
+scaffolded: /private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/primary/data/connect/brief.md (secondmate charter)
+home=/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/mate
+seed exit=0
+primary clone common dir: /private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/primary/projects/app/.git
+mate    clone common dir: /private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/mate/projects/app/.git
+
+### 2. PRIMARY spawns a scout for app first (its pool now exists in the default root)
+spawned primary-r1 harness=codex kind=scout window=firstmate:fm-primary-r1 worktree=/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/user-home/.treehouse/app-7a7e4b/1/app
+primary spawn exit=0
+typed into pane: treehouse get
+primary worktree=/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/user-home/.treehouse/app-7a7e4b/1/app
+  -> common dir: /private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/primary/projects/app/.git
+default pool (/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/user-home/.treehouse):
+app-7a7e4b
+update-check.json
+
+### 2b. the primary's scout finishes: its slot is returned and sits AVAILABLE in the default pool
+  | 🌳 Worktree returned to pool.
+  | 1     available    ~/.treehouse/app-7a7e4b/1/app
+
+### 3. SECONDMATE spawns a scout for the same project
+warning: /private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/mate/data/mate-r1/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+spawned mate-r1 harness=codex kind=ship mode=direct-PR yolo=off window=firstmate:fm-mate-r1 worktree=/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/mate/state/.treehouse/app-7a7e4b/1/app
+secondmate spawn exit=0
+typed into pane: treehouse get --root '/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/mate/state'
+pane treehouse log:
+  | 🌳 Setting up worktree...
+  | 🌳 Entered worktree at /private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/mate/state/.treehouse/app-7a7e4b/1/app. Type 'exit' to return.
+secondmate worktree=/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/mate/state/.treehouse/app-7a7e4b/1/app
+  -> common dir: /private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/mate/projects/app/.git
+  -> meta treehouse_root: /private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/mate/state
+mate private pool (/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/mate/state/.treehouse):
+app-7a7e4b
+default pool (/private/var/folders/vr/frc6nc792wz2l3gnsq66d9vr0000gn/T/fm-repro-pool-root.XW15zU/user-home/.treehouse):
+app-7a7e4b
+update-check.json
+
+### RESULT: secondmate spawn exit=0
