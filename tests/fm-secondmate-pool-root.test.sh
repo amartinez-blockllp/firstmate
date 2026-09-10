@@ -38,7 +38,7 @@ bash -c '. "$1"; fm_treehouse_supports_root' _ "$ROOT/bin/fm-primary-scope-lib.s
 # <root>/.treehouse/<pool>/<slot>/<repo> layout that the assertions below pin:
 # <mate>/state for the secondmate's pane, the throwaway home for the primary's.
 cleanup_panes() {
-  local pid_file pid wt_file wt root out
+  local pid_file pid wt_file wt root project out
   for pid_file in "$PANES"/*/shell.pid; do
     [ -f "$pid_file" ] || continue
     pid=$(cat "$pid_file" 2>/dev/null || true)
@@ -49,7 +49,11 @@ cleanup_panes() {
     wt=$(cat "$wt_file")
     [ -d "$wt" ] || continue
     root=${wt%/.treehouse/*}
-    if ! out=$(cd "$wt" && treehouse return --root "$root" --force "$wt" 2>&1); then
+    # Run from the project, as bin/fm-teardown.sh does: treehouse return kills every
+    # process inside the slot, which would include a shell that returned it from there.
+    project=$(git -C "$wt" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || project=$wt
+    project=${project%/.git}
+    if ! out=$(cd "$project" && treehouse return --root "$root" --force "$wt" 2>&1); then
       printf 'cleanup: treehouse return --root %s --force %s failed:\n%s\n' "$root" "$wt" "$out" >&2
     fi
   done
