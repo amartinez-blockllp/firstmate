@@ -20,9 +20,10 @@ Claude gates a folder it has never seen behind an interactive workspace-trust di
 A ship or scout spawn therefore pre-registers the worktree before launch, and the dialog does not appear.
 `../../../bin/fm-claude-trust.sh` records `hasTrustDialogAccepted` for that worktree path in `${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json`, and `../../../bin/fm-spawn.sh` refuses the spawn when the write fails rather than launching a worker that would wedge.
 
-The same write answers the "Allow external CLAUDE.md file imports?" prompt as No, which Claude raises when an ancestor `CLAUDE.md` imports a file outside the worktree, as a firstmate checkout's `@AGENTS.md` pointer does.
+When the worktree sits under a firstmate checkout, the same write answers the "Allow external CLAUDE.md file imports?" prompt as No, which Claude raises when an ancestor `CLAUDE.md` imports a file outside the worktree, as that checkout's `@AGENTS.md` pointer does.
 Claude reads that answer from the entry of the repository's main checkout rather than the linked worktree's, so the script writes it to both and never writes approval; its header owns the details.
-Task worktrees are pooled outside every firstmate checkout, so this is a backstop, and a visible import prompt means a worker was placed under one: report it rather than answering it.
+A worktree under no firstmate checkout gets no import answer at all, so a project's own external imports, and any answer already given to them, stay as they are.
+Task worktrees are pooled outside every firstmate checkout, so this is a backstop, and a visible import prompt that names firstmate's `AGENTS.md` means a worker was placed under one: report it rather than answering it.
 
 Never try to answer the trust dialog with a key.
 Firstmate's key plane carries only Enter, Escape, and C-c with no arrow navigation, so it cannot move a dialog's selection at all, and the observed rendering starts on `No, exit`, which means a sent Enter ends the session instead of accepting.

@@ -37,11 +37,13 @@ CLAUDE_VERSION=$(claude --version 2>/dev/null | head -n 1)
 PROMPT_RE='Allow external CLAUDE\.md file imports|disable external imports|allow external imports'
 READY_RE='bypass permissions on|shift\+tab to cycle|/effort'
 
-# A firstmate-shaped home: its CLAUDE.md imports an AGENTS.md outside every
-# worktree below it, exactly the pointer a live home carries.
+# A firstmate-shaped home: bin/fm-spawn.sh beside a CLAUDE.md that imports an
+# AGENTS.md outside every worktree below it, exactly the pointer a live home
+# carries and the shape the registration declines imports under.
 HOME_DIR="$LAB/home"
 PROJECT="$HOME_DIR/project"
-mkdir -p "$HOME_DIR"
+mkdir -p "$HOME_DIR/bin"
+: > "$HOME_DIR/bin/fm-spawn.sh"
 printf '@AGENTS.md\n' > "$HOME_DIR/CLAUDE.md"
 printf 'Sentinel instructions a project worker must never load.\n' > "$HOME_DIR/AGENTS.md"
 fm_git_init_commit "$PROJECT"

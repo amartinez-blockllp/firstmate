@@ -323,7 +323,9 @@ Enter to confirm · Esc to cancel
 The answer lives in the store's project entry as `hasClaudeMdExternalIncludesWarningShown` and `hasClaudeMdExternalIncludesApproved`, and Claude reads it from the entry of the repository's main checkout, not the linked worktree's own.
 Writing the pair onto the worktree entry alone still raised the prompt, and answering No there recorded `{"hasClaudeMdExternalIncludesApproved":false,"hasClaudeMdExternalIncludesWarningShown":true}` on the main checkout's entry instead.
 A live secondmate home's store showed the same split: the main project clone's entry carried that pair while its pooled worker's worktree entry carried only workspace trust.
-`bin/fm-claude-trust.sh` therefore writes the declined pair to both entries.
+`bin/fm-claude-trust.sh` therefore writes the declined pair to both entries, and only when the worktree sits under a firstmate checkout (a directory holding `bin/fm-spawn.sh` beside `AGENTS.md` or `CLAUDE.md`).
+The test is on the worktree alone: a primary home's project clones live inside the primary checkout while its pooled worktrees do not, so a per-entry test would decline imports on the main-checkout entry every primary worker reads.
+A worktree under no firstmate checkout gets workspace trust only, and every import answer already in the store, a project's own Yes included, is left as it stands.
 
 With that registration, a worker in a fresh worktree under the same importing ancestor showed no prompt and did not load the imported file.
 Asked to reply with the codeword that only the imported `AGENTS.md` defined, or `ABSENT`, it answered `ABSENT`; a positive control whose ancestor `CLAUDE.md` carried the codeword inline answered `PELICAN-SEVEN`.
@@ -341,7 +343,7 @@ ok - claude 2.1.268 (Claude Code): the registered answer suppresses the prompt a
 ```
 
 The same guard run against the previous registration, which wrote only workspace trust, failed its treatment arm with `still raised the import prompt`.
-`tests/fm-claude-trust.test.sh` pins the portable half: both entries receive the declined pair, a prior approval is reset to declined, and every other entry and field is preserved.
+`tests/fm-claude-trust.test.sh` pins the portable half: under a firstmate checkout both entries receive the declined pair, a prior approval is reset to declined, and every other entry and field is preserved; outside one, neither entry gains an import answer and a stored approval stays.
 
 ## Composer classification matrix
 

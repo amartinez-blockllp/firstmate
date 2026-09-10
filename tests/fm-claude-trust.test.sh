@@ -4,9 +4,10 @@
 # Both halves of the contract are load-bearing and both are proven here: a
 # legitimate fresh task worktree is trusted so a claude worker reaches its
 # brief with no human, and every out-of-scope path is REFUSED rather than
-# warned about or quietly skipped. The same registration answers Claude's
-# external-import prompt as No on both the worktree's entry and its main
-# checkout's, which is where the vendor reads that answer, and never approves.
+# warned about or quietly skipped. For a worktree under a firstmate checkout the
+# same registration answers Claude's external-import prompt as No on both the
+# worktree's entry and its main checkout's, which is where the vendor reads that
+# answer, and never approves; for any other worktree it writes no import answer.
 set -u
 
 # shellcheck source=tests/fixtures.sh
@@ -33,6 +34,15 @@ read_case() {
   IFS='|' read -r CASE_DIR PROJ WT CONFIG <<EOF
 $1
 EOF
+}
+
+# make_firstmate_checkout <dir>: give <dir> the shape of a firstmate checkout,
+# whose CLAUDE.md imports an AGENTS.md outside every worktree below it.
+make_firstmate_checkout() {
+  mkdir -p "$1/bin"
+  : > "$1/bin/fm-spawn.sh"
+  printf '@AGENTS.md\n' > "$1/CLAUDE.md"
+  printf 'Firstmate instructions a project worker must never load.\n' > "$1/AGENTS.md"
 }
 
 # run_trust <config> <worktree> <project> [home]: invoke with an isolated store.
@@ -90,6 +100,7 @@ test_fresh_worktree_is_trusted() {
   local rec out
   rec=$(make_case fresh)
   read_case "$rec"
+  make_firstmate_checkout "$CASE_DIR"
   out=$(run_trust "$CONFIG" "$WT" "$PROJ")
   expect_code 0 $? "a fresh linked worktree must be trusted: $out"
   assert_contains "$out" "trusted:" "registration did not report what it trusted"
@@ -100,7 +111,7 @@ test_fresh_worktree_is_trusted() {
   # The staged write is renamed into place, so no temporary store may survive it.
   [ -z "$(find "$CONFIG" -maxdepth 1 -name '.claude.json.fm-trust.*' -print -quit)" ] \
     || fail "a temporary store file was left behind in the config directory"
-  pass "fm-claude-trust.sh: a fresh task worktree is trusted"
+  pass "fm-claude-trust.sh: a fresh task worktree under a firstmate checkout is trusted with imports declined"
 }
 
 test_registration_is_idempotent() {
@@ -296,12 +307,14 @@ JSON
 
 # A Yes once given to some worker's import prompt is stored on the project's main
 # checkout entry, where every later worker of that project would read it and load
-# the imported instructions as its own. Registration must put it back to No,
-# keep every other field of both entries, and never leave an approval behind.
+# the imported firstmate instructions as its own. For a worktree under a firstmate
+# checkout, registration must put it back to No, keep every other field of both
+# entries, and never leave an approval behind.
 test_prior_import_approval_is_reset_to_declined() {
   local rec store out
   rec=$(make_case approval-reset)
   read_case "$rec"
+  make_firstmate_checkout "$CASE_DIR"
   store="$CONFIG/.claude.json"
   node -e 'const [s,p,w]=process.argv.slice(1);require("node:fs").writeFileSync(s,JSON.stringify({projects:{[p]:{hasClaudeMdExternalIncludesWarningShown:true,hasClaudeMdExternalIncludesApproved:true,allowedTools:["Read"],hasTrustDialogAccepted:false},[w]:{hasClaudeMdExternalIncludesApproved:true,lastCost:3}}}))' "$store" "$PROJ" "$WT"
   out=$(run_trust "$CONFIG" "$WT" "$PROJ")
@@ -313,6 +326,33 @@ test_prior_import_approval_is_reset_to_declined() {
   assert_store_value "$store" 3 "the worktree entry's other fields were lost" projects "$WT" lastCost
   assert_trusted "$store" "$WT" "the worktree was not trusted over a prior entry"
   pass "fm-claude-trust.sh: resets a prior import approval to declined and keeps every other field"
+}
+
+# A primary home's project clone lives inside the primary firstmate checkout
+# while its task worktrees are pooled outside it, so gating on each entry would
+# still decline imports on the main checkout's entry that every primary worker
+# reads. Gated on the worktree, registration leaves both entries' import answers
+# exactly as they were, a project's own Yes included, and records only trust.
+test_worktree_outside_firstmate_checkouts_leaves_import_answers_alone() {
+  local case_dir primary proj wt config store out
+  case_dir="$TMP_ROOT/no-firstmate-ancestor"
+  primary="$case_dir/primary"
+  proj="$primary/projects/project"
+  wt="$case_dir/pool/wt"
+  config="$case_dir/claude-config"
+  store="$config/.claude.json"
+  mkdir -p "$config" "$case_dir/pool"
+  make_firstmate_checkout "$primary"
+  fm_git_worktree "$proj" "$wt" wt-outside
+  node -e 'const [s,p,w]=process.argv.slice(1);require("node:fs").writeFileSync(s,JSON.stringify({projects:{[p]:{hasClaudeMdExternalIncludesWarningShown:true,hasClaudeMdExternalIncludesApproved:true,allowedTools:["Read"]},[w]:{lastCost:3}}}))' "$store" "$proj" "$wt"
+  out=$(run_trust "$config" "$wt" "$proj")
+  expect_code 0 $? "a worktree outside every firstmate checkout must be trusted: $out"
+  assert_trusted "$store" "$wt" "the worktree was not recorded as trusted"
+  assert_store_value "$store" '{"hasClaudeMdExternalIncludesWarningShown":true,"hasClaudeMdExternalIncludesApproved":true,"allowedTools":["Read"]}' \
+    "the main checkout's entry, a project's own import approval included, was changed" projects "$proj"
+  assert_store_value "$store" '{"lastCost":3,"hasTrustDialogAccepted":true}' \
+    "the worktree's entry gained more than workspace trust" projects "$wt"
+  pass "fm-claude-trust.sh: a worktree outside every firstmate checkout gets trust only and keeps every import answer"
 }
 
 test_symlinked_store_to_a_foreign_owned_target_is_refused() {
@@ -362,6 +402,9 @@ test_missing_node_is_refused() {
   local rec out bindir
   rec=$(make_case no-node)
   read_case "$rec"
+  # Under a firstmate checkout, so the import-decline scope path also runs on
+  # the node-free PATH and must still reach the interpreter refusal.
+  make_firstmate_checkout "$CASE_DIR"
   bindir=$(node_free_path "$CASE_DIR")
   out=$(PATH="$bindir" run_trust "$CONFIG" "$WT" "$PROJ")
   expect_code 1 $? "a missing node must refuse rather than let the spawn proceed: $out"
@@ -489,6 +532,7 @@ test_foreign_project_worktree_is_refused
 test_worktree_subdirectory_is_refused
 test_unrelated_store_content_is_preserved
 test_prior_import_approval_is_reset_to_declined
+test_worktree_outside_firstmate_checkouts_leaves_import_answers_alone
 test_symlinked_store_to_a_foreign_owned_target_is_refused
 test_symlinked_store_to_an_owned_target_is_accepted
 test_corrupt_store_fails_closed

@@ -83,17 +83,31 @@ fm_treehouse_pool_root() {  # <home>
   esac
   hash=$(printf '%s' "$home" | git hash-object --stdin 2>/dev/null) || return 1
   root="${base%/}/firstmate/treehouse-pools/$id-${hash:0:12}"
-  # Every home is itself such a checkout, so this walk also refuses a root
-  # inside the home, however the state base spells its way there.
-  dir=$root
+  # Every home is itself such a checkout, so this also refuses a root inside
+  # the home, however the state base spells its way there.
+  if dir=$(fm_path_under_firstmate_checkout "$root"); then
+    echo "error: secondmate $id's task-worktree pool $root would sit under the firstmate checkout $dir, whose instructions every worker there would load" >&2
+    return 1
+  fi
+  printf '%s\n' "$root"
+}
+
+# Print the nearest firstmate checkout at or above the absolute path $1 - a
+# directory holding bin/fm-spawn.sh beside AGENTS.md or CLAUDE.md, whose
+# CLAUDE.md Claude Code loads for every worker below it - and return 0, or
+# return 1 when there is none. fm_treehouse_pool_root refuses a pool root this
+# matches, and bin/fm-claude-trust.sh declines Claude's external imports only
+# for a task worktree this matches.
+fm_path_under_firstmate_checkout() {  # <absolute-path>
+  local dir=$1
   while [ -n "$dir" ]; do
     if [ -f "$dir/bin/fm-spawn.sh" ] && { [ -e "$dir/AGENTS.md" ] || [ -e "$dir/CLAUDE.md" ]; }; then
-      echo "error: secondmate $id's task-worktree pool $root would sit under the firstmate checkout $dir, whose instructions every worker there would load" >&2
-      return 1
+      printf '%s\n' "$dir"
+      return 0
     fi
     dir=${dir%/*}
   done
-  printf '%s\n' "$root"
+  return 1
 }
 
 # Whether the installed treehouse honours `treehouse get --root`, the single
